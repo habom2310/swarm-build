@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>swarm-build demo</title>
+    <link rel="stylesheet" href="../src/swarm-build.css" />
+    <style>
+      body { margin: 0; font: 17px/1.5 system-ui, sans-serif; background: #f3f3f0; color: #222; }
+      main { max-width: 1100px; margin: 0 auto; padding: 64px 16px; display: grid; gap: 40px; }
+      h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1.05; margin: 0; }
+      .frame { background: #111; padding: 12px; border-radius: 22px; box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.3); }
+      .frame img { display: block; width: 100%; height: auto; border-radius: 12px; }
+      button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <h1>A swarm builds your screenshot.</h1>
+        <p><button id="replay">Replay</button></p>
+      </div>
+      <div class="frame">
+        <img
+          id="shot"
+          src="app.svg"
+          alt="Dashboard with revenue, orders, a weekly sales chart and top items"
+          width="1200"
+          height="800"
+          data-swarm-pending
+          data-swarm-regions="0 0 18.3 100, 21 3.5 46.7 5.5, 85.7 3.5 11.7 5.5, 21 13 24.3 16, 47 13 24.3 16, 73 13 24.3 16, 21 32 50.3 64, 73 32 24.3 64"
+        />
+      </div>
+    </main>
+    <script type="module">
+      import { swarmBuild } from "../src/swarm-build.js";
+      const shot = document.getElementById("shot");
+      let swarm = swarmBuild(shot);
+      document.getElementById("replay").onclick = () => {
+        swarm.destroy();
+        swarm = swarmBuild(shot, { start: "now" });
+      };
+    </script>
+  </body>
+</html>

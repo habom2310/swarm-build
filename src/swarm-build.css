@@ -1,0 +1,17 @@
+/* Optional. Add data-swarm-pending to an image to keep it blank until swarm-build starts,
+   so it doesn't flash finished first. If the script never runs, the image appears after 4s. */
+[data-swarm-pending] {
+  visibility: hidden;
+  animation: swarm-build-fallback 0s 4s forwards;
+}
+@keyframes swarm-build-fallback {
+  to {
+    visibility: visible;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-swarm-pending] {
+    visibility: visible;
+    animation: none;
+  }
+}

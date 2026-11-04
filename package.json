@@ -1,0 +1,37 @@
+{
+  "name": "swarm-build",
+  "version": "0.1.0",
+  "description": "A swarm of named cursors builds an image region by region, like a multiplayer design file. Dependency-free.",
+  "type": "module",
+  "main": "./src/swarm-build.js",
+  "types": "./src/swarm-build.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/swarm-build.d.ts",
+      "default": "./src/swarm-build.js"
+    },
+    "./style.css": "./src/swarm-build.css"
+  },
+  "files": [
+    "src",
+    "skills"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "animation",
+    "cursor",
+    "multiplayer",
+    "hero",
+    "landing-page",
+    "screenshot"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}
