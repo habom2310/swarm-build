@@ -302,7 +302,11 @@ function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, opti
     const area = Math.min(1, (task.rect().width * task.rect().height) / (innerWidth * innerHeight));
     await move(c, { task, fx: 1, fy: 1 }, 0.4 + area * 0.6, easeInOut, (t) => {
       box.e = easeInOut(t);
-      badge.textContent = `${Math.round(box.e * width)} × ${Math.round(box.e * height)}`;
+      const w = Math.round(box.e * width);
+      const h = Math.round(box.e * height);
+      // No "0 × 0" tag while the drag is just starting.
+      badge.style.visibility = w && h ? "" : "hidden";
+      badge.textContent = `${w} × ${h}`;
     });
     c.scale = 1;
     await task.reveal(tween, c);

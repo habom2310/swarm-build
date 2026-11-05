@@ -191,6 +191,7 @@
         font-size: 18px;
         margin-right: auto;
         text-decoration: none;
+        white-space: nowrap;
       }
       .logo i {
         display: grid;
@@ -459,10 +460,10 @@
         border-radius: 3px;
         margin-right: 6px;
         vertical-align: -1px;
-        background: var(--ink);
+        background: linear-gradient(90deg, var(--ava), var(--kai), var(--noor), var(--theo), var(--mia), var(--ravi));
       }
       .legend i.light {
-        background: color-mix(in srgb, var(--ink) 25%, transparent);
+        opacity: 0.3;
       }
       .chart {
         display: block;
@@ -824,6 +825,60 @@
       .modes b {
         color: var(--ink);
       }
+      .modes a,
+      .refs a {
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .api {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+        gap: 40px;
+        margin-top: 56px;
+        padding-top: 40px;
+        border-top: 1px solid var(--line);
+      }
+      .api > div {
+        min-width: 0;
+      }
+      .api table {
+        margin-top: 14px;
+        font-size: 14.5px;
+      }
+      .api td {
+        vertical-align: top;
+        padding-right: 12px;
+        color: var(--text);
+      }
+      .api td:first-child,
+      .api td:last-child,
+      .api th:last-child {
+        text-align: left;
+      }
+      .api td:first-child code {
+        color: var(--ink);
+      }
+      .api dl {
+        margin: 14px 0 0;
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 10px 16px;
+        font-size: 14.5px;
+      }
+      .api dt code {
+        font-size: 13.5px;
+        color: var(--ink);
+      }
+      .api dd {
+        margin: 0;
+      }
+      .refs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        margin-top: 24px;
+        font-size: 15px;
+      }
 
       footer {
         border-top: 1px solid var(--line);
@@ -855,6 +910,53 @@
       }
       .dock :focus-visible {
         outline-color: #fff;
+      }
+      /* Before Run: a wide, flat chat composer, centred low on the screen. */
+      .dock.chat {
+        right: 50%;
+        bottom: 28px;
+        translate: 50% 0;
+        width: min(680px, calc(100vw - 32px));
+        border-radius: 18px;
+        font-size: 15px;
+      }
+      .dock.chat .dock-bar,
+      .dock.chat .log {
+        display: none;
+      }
+      .dock.chat .prompt {
+        align-items: center;
+        margin: 0;
+        padding: 10px 10px 10px 20px;
+        border: 0;
+        background: transparent;
+      }
+      .dock.chat .typed {
+        min-height: 0;
+        padding: 6px 0;
+      }
+      .dock.chat .run {
+        min-height: 40px;
+        padding: 0 16px;
+        font-size: 14px;
+      }
+      /* Run morphs the composer into the agent panel. */
+      .dock {
+        view-transition-name: agent-dock;
+      }
+      ::view-transition-group(agent-dock) {
+        animation-duration: 0.5s;
+        animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      ::view-transition-old(agent-dock),
+      ::view-transition-new(agent-dock) {
+        height: 100%;
+        object-fit: cover;
+        object-position: left bottom;
+      }
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation: none;
       }
       .dock-bar {
         display: flex;
@@ -1151,6 +1253,15 @@
       .controls .grow {
         flex: 1;
       }
+      .dock.done .seg,
+      .dock.done .grow {
+        display: none;
+      }
+      .dock.done #again,
+      .dock.done #get {
+        flex: 1;
+        justify-content: center;
+      }
 
       @media (pointer: coarse) {
         .controls button,
@@ -1185,18 +1296,30 @@
         }
         .gallery,
         .use-grid,
-        .modes {
+        .modes,
+        .api {
           grid-template-columns: 1fr;
         }
+        nav.top,
         .links {
-          display: none;
+          gap: 16px;
         }
         .dock {
           right: 16px;
           bottom: 16px;
         }
+        .dock.chat {
+          right: 50%;
+          bottom: 16px;
+        }
         /* Before Run, keep the dock to its prompt on small screens */
         .dock:not(.started) .log {
+          display: none;
+        }
+      }
+      @media (max-width: 480px) {
+        /* Docs is also linked from the API block */
+        .links .docs {
           display: none;
         }
       }
@@ -1227,7 +1350,7 @@
             ><span style="background: var(--ava)"></span><span style="background: var(--kai)"></span><span style="background: var(--noor)"></span><span style="background: var(--theo)"></span><span style="background: var(--mia)"></span><span style="background: var(--ravi)"></span></i
           >Swarm Build</a
         >
-        <span class="links"><a href="#gallery">Gallery</a><a href="https://github.com/habom2310/swarm-build/blob/main/skills/swarm-build/SKILL.md">Skill</a></span>
+        <span class="links"><a href="#use">Install</a><a class="docs" href="https://github.com/habom2310/swarm-build#readme">Docs</a></span>
         <a class="btn" href="https://github.com/habom2310/swarm-build">GitHub</a>
       </nav>
     </div>
@@ -1237,7 +1360,7 @@
         <header class="hero">
           <div>
             <h1 data-swarm-block>Let a <span class="swarm">swarm</span> build your page.</h1>
-            <p class="lede" data-swarm-block>Ask your coding agent for /swarm-build. It marks the blocks on your page, and a swarm of named cursors rebuilds it in front of your visitors.</p>
+            <p class="lede" data-swarm-block>Install the Swarm Build skill in your coding agent, then ask for it. The agent marks the blocks on your page, and a swarm of named cursors rebuilds it in front of your visitors.</p>
             <div class="actions">
               <button class="btn primary" type="button" id="watch" data-swarm-block>
                 Watch it build
@@ -1264,7 +1387,7 @@
                 <div class="tile c" data-swarm-block></div>
               </div>
               <div class="wide" data-swarm-block><span class="tag" style="--c: var(--kai)" data-size></span></div>
-              <span class="cursor static" style="--c: var(--ava); left: 74%; top: 18px"><svg><use href="#arrow" /></svg><b>Ava</b></span>
+              <span class="cursor static" style="--c: var(--ava); left: 58%; top: 26px"><svg><use href="#arrow" /></svg><b>Ava</b></span>
               <span class="cursor static" style="--c: var(--noor); left: 64%; top: 196px"><svg><use href="#arrow" /></svg><b>Noor</b></span>
               <span class="cursor static" style="--c: var(--kai); right: 64px; bottom: 34px"><svg><use href="#arrow" /></svg><b>Kai</b></span>
             </div>
@@ -1375,8 +1498,8 @@
                   <label data-swarm-block>Blocks selector<input type="text" value="[data-swarm-block]" readonly aria-describedby="selector-note" /></label>
                   <p id="selector-note" class="sub" data-swarm-block>Fixed for this demo: it is the attribute this page marks its blocks with.</p>
                   <label class="switch-row" data-swarm-block><input type="checkbox" role="switch" id="opt-type" checked />Type plain-text blocks</label>
-                  <label class="switch-row" data-swarm-block><input type="checkbox" role="switch" id="opt-tour" />Auto-scroll with the swarm</label>
-                  <button class="btn primary" type="submit" data-swarm-block>Start the swarm</button>
+                  <label class="switch-row" data-swarm-block><input type="checkbox" role="switch" id="opt-tour" checked />Auto-scroll with the swarm</label>
+                  <button class="btn primary" type="submit" data-swarm-block>Save settings</button>
                 </form>
               </article>
               <figcaption data-swarm-block>Form</figcaption>
@@ -1434,7 +1557,7 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
             </div>
             <div>
               <h3 data-swarm-block>Or wire it yourself</h3>
-              <p data-swarm-block>Copy the three files in src/, mark your blocks, and call it once the page has loaded. No dependencies, no build step.</p>
+              <p data-swarm-block>Copy src/swarm-build.js into your project, mark your blocks, and call it once the page has loaded. No dependencies, no build step.</p>
               <div class="code mono" data-swarm-block>
                 <pre><code>&lt;h1 data-swarm-block&gt;Hello&lt;/h1&gt;
 &lt;script type="module"&gt;
@@ -1446,9 +1569,40 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
             </div>
           </div>
           <ul class="modes">
-            <li data-swarm-block><b>Page mode</b> rebuilds the live elements of a page, block by block, like this one.</li>
-            <li data-swarm-block><b>Image mode</b> builds a screenshot region by region, for a hero or product shot.</li>
+            <li data-swarm-block><b>Page mode</b>, <code>swarmBuildPage()</code>, rebuilds the live elements of a page, block by block, like this one.</li>
+            <li data-swarm-block><b>Image mode</b>, <code>swarmBuild(img)</code>, builds a screenshot region by region, for a hero or product shot. <a href="examples/">See it on a screenshot</a>.</li>
           </ul>
+
+          <div class="api">
+            <div>
+              <h3 data-swarm-block>Options</h3>
+              <table data-swarm-block>
+                <thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead>
+                <tbody>
+                  <tr><td><code>speed</code></td><td><code>1</code></td><td>2 builds twice as fast</td></tr>
+                  <tr><td><code>typeSpeed</code></td><td><code>1</code></td><td>Speed of typed-in text, page mode</td></tr>
+                  <tr><td><code>start</code></td><td><code>"now"</code></td><td><code>"visible"</code> waits until it scrolls into view</td></tr>
+                  <tr><td><code>agents</code></td><td>6 cursors</td><td><code>[{ name, color }]</code> in your palette</td></tr>
+                  <tr><td><code>zIndex</code></td><td>top</td><td>Lower it to keep a header or panel above the cursors</td></tr>
+                  <tr><td><code>onDone</code></td><td>none</td><td>Called once when the build completes</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3 data-swarm-block>Every swarm returns</h3>
+              <dl data-swarm-block>
+                <dt><code>finished</code></dt><dd>A promise that resolves however it ends</dd>
+                <dt><code>finish()</code></dt><dd>Jump to the built page</dd>
+                <dt><code>destroy()</code></dt><dd>Stop and undo everything, for unmount</dd>
+                <dt><code>setSpeed(n)</code></dt><dd>Change speed mid-build</dd>
+              </dl>
+              <p class="refs" data-swarm-block>
+                <a href="https://github.com/habom2310/swarm-build#readme">README</a>
+                <a href="https://github.com/habom2310/swarm-build/blob/main/skills/swarm-build/SKILL.md">The skill</a>
+                <a href="https://github.com/habom2310/swarm-build/blob/main/src/swarm-build.d.ts">Types</a>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -1461,7 +1615,7 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
     </div>
 
     <!-- The agent: not part of the page, so the swarm leaves it alone. -->
-    <aside class="dock" id="dock" aria-label="Coding agent demo">
+    <aside class="dock chat" id="dock" aria-label="Coding agent demo">
       <div class="dock-bar">
         <span class="mono">~/my-site</span>
         <ol class="steps" id="steps" aria-label="Progress"><li data-step="1">Ask</li><li data-step="2">Plan</li><li data-step="3">Build</li></ol>
@@ -1487,7 +1641,7 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
           <button id="tour" aria-pressed="false">Auto-scroll</button>
           <button id="skip" aria-keyshortcuts="Escape">Finish<kbd aria-hidden="true">Esc</kbd></button>
           <button id="again" hidden>Replay</button>
-          <a id="get" href="#use" hidden>Add it to your site</a>
+          <a id="get" href="#use" hidden>Get the skill</a>
         </div>
       </div>
     </aside>
@@ -1538,7 +1692,7 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
             button.textContent = "Copied";
           } catch {
             getSelection().selectAllChildren(button.previousElementSibling);
-            button.textContent = "Press Ctrl+C";
+            button.textContent = "Selected, copy it";
           }
           setTimeout(() => (button.textContent = "Copy"), 1800);
         }),
@@ -1563,6 +1717,36 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
       function status(text, ok = false) {
         $("status").textContent = text;
         $("status").classList.toggle("ok", ok);
+      }
+      /** Morphs the dock between shapes where the browser can; otherwise it just switches. */
+      function morph(change) {
+        if (reduced || !document.startViewTransition) return change();
+        let done = false;
+        const once = () => {
+          if (done) return;
+          done = true;
+          change();
+        };
+        const transition = document.startViewTransition(once);
+        // A skipped transition rejects these; skipping is expected here.
+        for (const promise of [transition.ready, transition.finished, transition.updateCallbackDone]) promise.catch(() => {});
+        // A throttled or busy tab can stall the snapshot; never let that hold the dock back.
+        setTimeout(() => {
+          if (done) return;
+          transition.skipTransition();
+          once();
+        }, 300);
+      }
+      function buildingStatus() {
+        if (!document.body.classList.contains("building")) return;
+        const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
+        status(
+          touring
+            ? "Following the swarm. Scroll to take over."
+            : atBottom
+              ? "Building. Scroll up to watch the rest."
+              : "Building. Scroll down: the swarm follows you.",
+        );
       }
       function minimize(min) {
         dock.classList.toggle("min", min);
@@ -1599,12 +1783,15 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
         if (!lib || state === "planning") return;
         if (state === "built") return build();
         state = "planning";
-        minimize(false);
-        dock.classList.add("started");
-        $("run").disabled = true;
-        $("typed").innerHTML = "";
-        $("typed").classList.add("empty");
-        log(highlight(PROMPT), "user");
+        morph(() => {
+          dock.classList.remove("chat");
+          minimize(false);
+          dock.classList.add("started");
+          $("run").disabled = true;
+          $("typed").innerHTML = "";
+          $("typed").classList.add("empty");
+          log(highlight(PROMPT), "user");
+        });
         step(2);
         await sleep(400);
         log("Read <em>skills/swarm-build/SKILL.md</em>", "ok");
@@ -1626,8 +1813,8 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
           return;
         }
         log("Swarm started.");
-        status("Building. Scroll down: the swarm follows you.");
         $("controls").hidden = false;
+        dock.classList.remove("done");
         $("again").hidden = $("get").hidden = true;
         $("skip").hidden = $("tour").hidden = false;
         dock.classList.add("compact");
@@ -1639,8 +1826,14 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
         const current = (swarm = lib.swarmBuildPage("[data-swarm-block]", {
           speed,
           typeSpeed: $("opt-type").checked ? 1 : 100,
+          // Under the agent panel, so the panel stays readable.
+          zIndex: 900,
         }));
-        if ($("opt-tour").checked) tour();
+        buildingStatus();
+        // Let the hero build in view first, then follow the swarm down the page.
+        sleep(2500 / speed).then(() => {
+          if (swarm === current && !touring && $("opt-tour").checked && document.body.classList.contains("building")) tour();
+        });
         current.finished.then(() => {
           if (swarm !== current) return;
           stopTour();
@@ -1648,7 +1841,8 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
           const seconds = ((performance.now() - began) / 1000).toFixed(1);
           $("stat-note").textContent = skipped ? `Finished early at ${seconds}s` : `Built in ${seconds}s at ${speed}×`;
           log(skipped ? `Finished early at ${seconds}s.` : `Page built in ${seconds}s.`, "ok");
-          status("Page built. Replay it, or add it to your site.", true);
+          status("Page built. Replay it, or get the skill.", true);
+          dock.classList.add("done");
           const hadFocus = dock.contains(document.activeElement) || document.activeElement === document.body;
           $("again").hidden = $("get").hidden = false;
           $("skip").hidden = $("tour").hidden = true;
@@ -1669,13 +1863,16 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
           touring = requestAnimationFrame(stepTour);
         };
         touring = requestAnimationFrame(stepTour);
+        buildingStatus();
       }
       /** A visitor's stop (wheel, touch, the button) also turns the form's switch off. */
       function stopTour(byVisitor = false) {
         cancelAnimationFrame(touring);
-        if (touring && byVisitor) $("opt-tour").checked = false;
+        // Covers the wait before the tour starts too, so it never fights a visitor who took over.
+        if (byVisitor && document.body.classList.contains("building")) $("opt-tour").checked = false;
         touring = 0;
         $("tour").setAttribute("aria-pressed", "false");
+        buildingStatus();
       }
 
       /** From the hero or the form: skip the typing and go. */
@@ -1690,9 +1887,12 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
 
       $("run").addEventListener("click", run);
       $("watch").addEventListener("click", start);
+      // The form's switches apply as soon as they change; saving only confirms it.
       $("config").addEventListener("submit", (e) => {
         e.preventDefault();
-        start();
+        const button = e.submitter;
+        button.textContent = "Saved";
+        setTimeout(() => (button.textContent = "Save settings"), 1500);
       });
       $("min").addEventListener("click", () => minimize(!dock.classList.contains("min")));
       // Enter runs the prompt, but not while a link or another control has focus. Esc finishes a build.
@@ -1716,7 +1916,11 @@ cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
         if (document.body.classList.contains("building") && $("opt-tour").checked !== Boolean(touring)) tour();
       });
       $("skip").addEventListener("click", finish);
-      $("again").addEventListener("click", build);
+      $("again").addEventListener("click", () => {
+        // Replay from the top, so the hero builds in view first.
+        window.scrollTo({ top: 0, behavior: "instant" });
+        build();
+      });
       // Scrolling by hand stops the tour; taps on its own controls toggle it instead.
       const handScroll = (e) => e.target.closest?.("#dock, .switch-row") || stopTour(true);
       addEventListener("wheel", handScroll, { passive: true });
