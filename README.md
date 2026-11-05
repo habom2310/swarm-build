@@ -3,6 +3,8 @@
 A swarm of named, coloured cursors builds an image region by region, like a multiplayer design file.
 Each cursor drags out a box with a live `W × H` badge, and that part of the image sweeps in.
 
+**[Live demo](https://habom2310.github.io/swarm-build/)**: watch an agent use the skill, then the swarm build the screenshot.
+
 - One dependency-free ES module, about 400 lines. No build step.
 - Works with plain HTML and any framework.
 - Respects `prefers-reduced-motion`, works under a strict CSP and Trusted Types, and cleans up after itself.
