@@ -168,6 +168,18 @@ test("page mode builds every block and restores styles and text", async () => {
   assert.equal(blocks[3].childNodes.length, 1);
 });
 
+test("page mode makes hidden blocks inert and restores them", async () => {
+  const blocks = page();
+  blocks[3].inert = false;
+  holdView = true;
+  const swarm = swarmBuildPage(blocks, { speed: 50, typeSpeed: 50 });
+  assert.ok(blocks.every((b) => b.inert === true), "hidden blocks leave the tab order");
+  observers[0].scrollIntoView();
+  await swarm.finished;
+  assert.equal(blocks[3].inert, false);
+  assert.ok(blocks.slice(0, 3).every((b) => !b.inert));
+});
+
 test("page mode destroy() mid-typing puts the original text back", async () => {
   const blocks = page();
   const swarm = swarmBuildPage(blocks, { speed: 5, typeSpeed: 0.02 });
@@ -230,6 +242,7 @@ test("a second swarm over hidden blocks does not keep them hidden", async () => 
   const second = swarmBuildPage(blocks, { speed: 50 });
   first.destroy();
   assert.match(blocks[2].style.clipPath, /^inset\(0/, "still held by the second swarm");
+  assert.equal(blocks[2].inert, true, "still inert for the second swarm");
   second.finish();
   await Promise.all([first.finished, second.finished]);
   assert.equal(blocks[2].style.clipPath, "");
