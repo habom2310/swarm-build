@@ -5,11 +5,13 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM("<!doctype html><body></body>", { pretendToBeVisual: true });
 const { window } = dom;
 let reduced = false;
+let holdView = false;
 const observers = [];
 Object.assign(globalThis, {
   window,
   document: window.document,
   Element: window.Element,
+  Node: window.Node,
   HTMLImageElement: window.HTMLImageElement,
   getComputedStyle: window.getComputedStyle,
   innerWidth: 1280,
@@ -21,17 +23,26 @@ Object.assign(globalThis, {
     observe() {}
     disconnect() {}
   },
+  // Everything is in view at once, unless a test holds the view to scroll by hand.
   IntersectionObserver: class {
     constructor(cb) {
       this.cb = cb;
+      this.nodes = [];
       observers.push(this);
     }
-    observe() {}
+    observe(node) {
+      this.nodes.push(node);
+      if (!holdView) queueMicrotask(() => this.cb([{ target: node, isIntersecting: true }]));
+    }
+    scrollIntoView() {
+      this.cb(this.nodes.map((target) => ({ target, isIntersecting: true })));
+    }
+    unobserve() {}
     disconnect() {}
   },
 });
 window.HTMLImageElement.prototype.decode = () => Promise.resolve();
-const { swarmBuild } = await import("../src/swarm-build.js");
+const { swarmBuild, swarmBuildPage } = await import("../src/swarm-build.js");
 
 const leftovers = () => document.querySelectorAll("[aria-hidden]").length;
 function image(parent = document.body) {
@@ -46,6 +57,7 @@ function image(parent = document.body) {
 beforeEach(() => {
   document.body.innerHTML = "";
   reduced = false;
+  holdView = false;
   observers.length = 0;
 });
 
@@ -85,6 +97,7 @@ test("destroy() mid-run resolves finished without onDone", async () => {
 });
 
 test("destroy() while waiting to scroll into view resolves finished without onDone", async () => {
+  holdView = true;
   let calls = 0;
   const swarm = swarmBuild(image(), { onDone: () => calls++ });
   swarm.destroy();
@@ -94,9 +107,12 @@ test("destroy() while waiting to scroll into view resolves finished without onDo
 });
 
 test("starts when the image scrolls into view", async () => {
+  holdView = true;
   let calls = 0;
   const swarm = swarmBuild(image(), { speed: 50, onDone: () => calls++ });
-  observers[0].cb([{ isIntersecting: true }]);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(calls, 0);
+  observers[0].scrollIntoView();
   await swarm.finished;
   assert.equal(calls, 1);
 });
@@ -127,4 +143,104 @@ test("bad input is ignored instead of throwing", async () => {
   swarm.finish();
   await swarm.finished;
   assert.equal(leftovers(), 0);
+});
+
+function page() {
+  document.body.innerHTML = `
+    <section data-swarm-block style="clip-path: circle(80%)">
+      <h2 data-swarm-block>Pricing plans</h2>
+      <div data-swarm-block class="card"><p data-swarm-block>Pro, $12 a month</p></div>
+    </section>`;
+  return [...document.querySelectorAll("[data-swarm-block]")];
+}
+
+test("page mode builds every block and restores styles and text", async () => {
+  const blocks = page();
+  let calls = 0;
+  const swarm = swarmBuildPage("[data-swarm-block]", { speed: 50, typeSpeed: 50, onDone: () => calls++ });
+  assert.equal(blocks[1].style.clipPath, "inset(0 0 100% 0)");
+  await swarm.finished;
+  assert.equal(calls, 1);
+  assert.equal(leftovers(), 0);
+  assert.equal(blocks[0].style.clipPath, "circle(80%)");
+  assert.equal(blocks[2].style.clipPath, "");
+  assert.equal(blocks[1].textContent, "Pricing plans");
+  assert.equal(blocks[3].childNodes.length, 1);
+});
+
+test("page mode destroy() mid-typing puts the original text back", async () => {
+  const blocks = page();
+  const swarm = swarmBuildPage(blocks, { speed: 5, typeSpeed: 0.02 });
+  for (let i = 0; i < 200 && !blocks[1].querySelector("span"); i++) await new Promise((r) => setTimeout(r, 20));
+  assert.ok(blocks[1].querySelector("span"), "heading is being typed");
+  swarm.destroy();
+  await swarm.finished;
+  assert.equal(blocks[1].textContent, "Pricing plans");
+  assert.equal(blocks[1].childNodes.length, 1);
+  assert.equal(blocks[1].style.clipPath, "");
+  assert.equal(leftovers(), 0);
+});
+
+test("page mode waits for blocks below the fold", async () => {
+  holdView = true;
+  page();
+  let calls = 0;
+  const swarm = swarmBuildPage("[data-swarm-block]", { speed: 50, onDone: () => calls++ });
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(calls, 0);
+  observers[0].scrollIntoView();
+  await swarm.finished;
+  assert.equal(calls, 1);
+});
+
+test("page mode finish() mid-typing settles and restores the text", async () => {
+  const blocks = page();
+  let calls = 0;
+  const swarm = swarmBuildPage(blocks, { speed: 5, typeSpeed: 0.02, onDone: () => calls++ });
+  for (let i = 0; i < 200 && !blocks[1].querySelector("span"); i++)
+    await new Promise((r) => setTimeout(r, 20));
+  assert.ok(blocks[1].querySelector("span"), "heading is being typed into one span");
+  assert.equal(blocks[1].childNodes.length, 1);
+  swarm.finish();
+  await swarm.finished;
+  assert.equal(calls, 1);
+  assert.equal(blocks[1].textContent, "Pricing plans");
+  assert.equal(blocks[1].querySelector("span"), null);
+  assert.equal(leftovers(), 0);
+});
+
+test("page mode skips blocks that are not rendered and duplicate nodes", async () => {
+  const blocks = page();
+  window.Element.prototype.checkVisibility = function () {
+    return this.tagName !== "H2";
+  };
+  try {
+    const swarm = swarmBuildPage([...blocks, blocks[2]], { speed: 50, typeSpeed: 50 });
+    assert.equal(blocks[1].style.clipPath, "", "the unrendered heading is left alone");
+    await swarm.finished;
+    assert.equal(blocks[2].style.clipPath, "");
+  } finally {
+    delete window.Element.prototype.checkVisibility;
+  }
+});
+
+test("a second swarm over hidden blocks does not keep them hidden", async () => {
+  const blocks = page();
+  const first = swarmBuildPage(blocks, { speed: 50 });
+  const second = swarmBuildPage(blocks, { speed: 50 });
+  first.destroy();
+  assert.match(blocks[2].style.clipPath, /^inset\(0/, "still held by the second swarm");
+  second.finish();
+  await Promise.all([first.finished, second.finished]);
+  assert.equal(blocks[2].style.clipPath, "");
+  assert.equal(blocks[0].style.clipPath, "circle(80%)");
+});
+
+test("setSpeed changes a running swarm", async () => {
+  const blocks = page();
+  const swarm = swarmBuildPage(blocks, { speed: 0.01 });
+  swarm.setSpeed(80);
+  swarm.setSpeed(-1);
+  const r = await Promise.race([swarm.finished.then(() => "done"), new Promise((r) => setTimeout(() => r("slow"), 3000))]);
+  assert.equal(r, "done");
 });

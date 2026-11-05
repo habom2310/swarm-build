@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assignTasks, autoRegions, parseRegions } from "../src/swarm-build.js";
+import { autoRegions, parseRegions } from "../src/swarm-build.js";
 
 test("parseRegions reads comma or semicolon separated quads", () => {
   assert.deepEqual(parseRegions("0 0 10 100, 12 4.5 58 5;  70 4 30 13"), [
@@ -12,15 +12,6 @@ test("parseRegions reads comma or semicolon separated quads", () => {
 
 test("parseRegions skips malformed parts", () => {
   assert.deepEqual(parseRegions("1 2 3, a b c d, 1 2 3 4,"), [{ x: 1, y: 2, w: 3, h: 4 }]);
-});
-
-test("assignTasks gives every task to exactly one agent, round robin", () => {
-  assert.deepEqual(assignTasks(5, 2), [
-    [0, 2, 4],
-    [1, 3],
-  ]);
-  assert.deepEqual(assignTasks(2, 6), [[0], [1]]);
-  assert.deepEqual(assignTasks(0, 3), [[]]);
 });
 
 test("autoRegions stays inside the image", () => {

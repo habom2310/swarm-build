@@ -1,11 +1,12 @@
 # swarm-build
 
-A swarm of named, coloured cursors builds an image region by region, like a multiplayer design file.
-Each cursor drags out a box with a live `W × H` badge, and that part of the image sweeps in.
+A swarm of named, coloured cursors builds your page, like a multiplayer design file.
+Each cursor drags out a box with a live `W × H` badge, then that block sweeps or types in.
+It works on a whole live page (`swarmBuildPage`) or on a single screenshot (`swarmBuild`).
 
-**[Live demo](https://habom2310.github.io/swarm-build/)**: watch an agent use the skill, then the swarm build the screenshot.
+**[Live demo](https://habom2310.github.io/swarm-build/)**: watch an agent use the skill, then the swarm rebuild the whole page.
 
-- One dependency-free ES module, about 400 lines. No build step.
+- One dependency-free ES module, about 600 lines. No build step.
 - Works with plain HTML and any framework.
 - Respects `prefers-reduced-motion`, works under a strict CSP and Trusted Types, and cleans up after itself.
 - Not on npm yet: copy the three files in `src/`.
@@ -25,9 +26,17 @@ Each cursor drags out a box with a live `W × H` badge, and that part of the ima
 ```
 
 Each region is `x y w h` in percent of the image, built in the order given.
-See [examples/index.html](examples/index.html) for a runnable demo.
+See [index.html](index.html) (page mode) and [examples/index.html](examples/index.html) (image mode).
 
 ## API
+
+Page mode: mark blocks with `data-swarm-block`, then
+
+```js
+const swarm = swarmBuildPage("[data-swarm-block]", { speed: 1.5 });
+```
+
+Image mode:
 
 ```js
 const swarm = swarmBuild(targets, options);
@@ -37,6 +46,7 @@ await swarm.finished; // or swarm.finish(), swarm.destroy()
 - `targets`: an element, `{ el, regions?, src? }`, or an array of them (one swarm across several images).
 - `options`: `agents`, `speed`, `start` (`"visible"` or `"now"`), `canvas`, `zIndex`, `onDone`.
 - `swarmBuildAll(selector = "[data-swarm]")` starts one swarm per matching element.
+- Every swarm has `finished`, `finish()`, `destroy()` and `setSpeed(n)`.
 
 Types are in [src/swarm-build.d.ts](src/swarm-build.d.ts), and the full guide is in the [skill](skills/swarm-build/SKILL.md).
 
