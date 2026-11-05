@@ -1,4 +1,4 @@
-// swarm-build: a swarm of named cursors builds an image, region by region.
+// swarm-build: a swarm of named cursors builds an image or a whole page, piece by piece.
 // Dependency-free ES module. MIT licensed. See README.md and skills/swarm-build/SKILL.md.
 
 export const DEFAULT_AGENTS = [
@@ -30,21 +30,15 @@ export function parseRegions(text) {
     .map(([x, y, w, h]) => ({ x, y, w, h }));
 }
 
-/** Round-robin: agent a takes tasks a, a + n, a + 2n... */
-export function assignTasks(taskCount, agentCount) {
-  const n = Math.max(1, Math.min(agentCount, taskCount));
-  return Array.from({ length: n }, (_, a) => {
-    const mine = [];
-    for (let i = a; i < taskCount; i += n) mine.push(i);
-    return mine;
-  });
-}
-
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 const easeOut = (t) => 1 - (1 - t) ** 2;
 const easeIn = (t) => t * t;
 const lerp = (a, b, t) => a + (b - a) * t;
 const inset = ({ x, y, w, h }, hPct = h) => `inset(${y}% ${100 - x - w}% ${100 - y - hPct}% ${x}%)`;
+// Hides an element. The sweep reaches 40px past its edges so most shadows show as it builds;
+// larger glows, and the element's own clip-path, return when the sweep ends.
+const HIDDEN = "inset(0 0 100% 0)";
+const sweep = (e) => `inset(-40px -40px calc(${(1 - e) * 100}% - ${e * 40}px) -40px)`;
 const ABORT = Symbol("swarm-build destroyed");
 
 function el(tag, style, parent) {
@@ -78,50 +72,39 @@ function imageSource(node) {
   return getComputedStyle(node).backgroundImage.match(/^url\(["']?(.*?)["']?\)$/)?.[1] ?? "";
 }
 
-function normalize(targets) {
-  const list = (Array.isArray(targets) ? targets : [targets]).filter(Boolean);
-  return list.flatMap((t) => {
-    const node = t instanceof Element ? t : t.el;
-    if (!node?.parentElement) return [];
-    const given = t instanceof Element ? null : t.regions;
-    const parsed = node.dataset.swarmRegions ? parseRegions(node.dataset.swarmRegions) : [];
-    const regions = given?.length ? given : parsed.length ? parsed : autoRegions();
-    const src = (t instanceof Element ? null : t.src) || imageSource(node);
-    if (!src) {
-      console.warn("swarm-build: no image URL for", node);
-      return [];
-    }
-    return [{ node, regions, src }];
-  });
+/** Plain text a block can type in, or null when it holds elements or too much text. */
+function typeable(node) {
+  if (![...node.childNodes].every((n) => n.nodeType === Node.TEXT_NODE)) return null;
+  const text = node.textContent;
+  return text.trim().length > 0 && text.length <= 240 ? text : null;
 }
 
-/**
- * Builds each target image region by region with a swarm of cursors.
- * `finished` always resolves. `onDone` runs once when the build completes or `finish()` is
- * called, never after `destroy()`.
- * @param {import("./swarm-build").Target | import("./swarm-build").Target[]} targets
- * @param {import("./swarm-build").Options} [options]
- * @returns {import("./swarm-build").SwarmBuild}
- */
-export function swarmBuild(targets, options = {}) {
-  const { start = "visible", canvas = "#fff", zIndex = 2147483000, onDone } = options;
-  const agents = options.agents?.length ? options.agents : DEFAULT_AGENTS;
-  const speed = options.speed > 0 ? options.speed : 1;
-  const items = normalize(targets);
-  const reveal = () => items.forEach(({ node }) => node.removeAttribute("data-swarm-pending"));
+/** Each block's own clip-path, kept while any swarm holds it, so overlapping swarms restore it once. */
+const owned = new WeakMap();
+function hold(node) {
+  const entry = owned.get(node) ?? { clip: node.style.clipPath, count: 0 };
+  entry.count++;
+  owned.set(node, entry);
+  return entry.clip;
+}
+function release(node) {
+  const entry = owned.get(node);
+  if (!entry || --entry.count > 0) return;
+  owned.delete(node);
+  node.style.clipPath = entry.clip;
+}
 
-  // Reduced motion, or the CSS fallback already showed the image: nothing to build.
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const fallbackShown = items.some(({ node }) =>
-    node
-      .getAnimations?.()
-      .some((a) => a.animationName === "swarm-build-fallback" && a.playState === "finished"),
-  );
-  if (reduced || fallbackShown || items.length === 0) {
-    reveal();
-    onDone?.();
-    return { finished: Promise.resolve(), finish() {}, destroy() {} };
-  }
+const stopped = { finished: Promise.resolve(), finish() {}, destroy() {}, setSpeed() {} };
+
+/**
+ * The shared engine: a swarm of cursors works through `tasks`. Each task is a rectangle the
+ * cursor drags out, then a `reveal` tween. A task starts once it has scrolled into view and
+ * its `parent` task is built.
+ */
+function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, options }) {
+  const { start = "now", zIndex = 2147483000, onDone } = options;
+  const agents = options.agents?.length ? options.agents : DEFAULT_AGENTS;
+  let speed = options.speed > 0 ? options.speed : 1;
 
   let state = "idle"; // idle, running, ended
   let done = false; // finish() was called: every tween jumps to its end
@@ -129,9 +112,10 @@ export function swarmBuild(targets, options = {}) {
   const finished = new Promise((r) => (resolveFinished = r));
   const cleanups = [];
 
-  // One loop drives every tween, the cursors and the overlay positions.
+  // One loop drives every tween, the cursors and the drag boxes.
   const active = new Set();
   let frame = 0;
+  let last = 0;
   const settle = (tw, t) => {
     tw.update(t);
     if (t >= 1) {
@@ -140,130 +124,23 @@ export function swarmBuild(targets, options = {}) {
     }
   };
   const tick = (now) => {
-    for (const tw of [...active]) settle(tw, Math.min(1, (now - tw.t0) / tw.duration));
-    layers.forEach((l) => l.place());
-    renderCursors();
+    // Clamped so a tab coming back from the background doesn't jump to the end.
+    const dt = last ? Math.min(now - last, 100) * speed : 0;
+    last = now;
+    for (const tw of [...active]) settle(tw, Math.min(1, (tw.t += dt / tw.duration)));
+    render();
     frame = requestAnimationFrame(tick);
   };
-  /** Animates t from 0 to 1 over `seconds`; rejects with ABORT after destroy(). */
+  /** Animates t from 0 to 1 over `seconds`; rejects with ABORT once the swarm has ended. */
   const tween = (seconds, update = () => {}) =>
     new Promise((resolve, reject) => {
       if (state === "ended") return reject(ABORT);
-      const tw = { t0: performance.now(), duration: (seconds * 1000) / speed, update, resolve, reject };
+      const tw = { t: 0, duration: Math.max(1, seconds * 1000), update, resolve, reject };
       if (done) settle(tw, 1);
       else active.add(tw);
     });
 
-  // Per image, inside its parent so the parent's rounded corners clip it: a blank canvas, plus
-  // a tile, box and size badge for each region.
-  const parents = new Map();
-  const layers = items.map(({ node, regions, src }) => {
-    const parent = node.parentElement;
-    if (!parents.has(parent)) {
-      parents.set(parent, parent.style.position);
-      if (["static", ""].includes(getComputedStyle(parent).position)) parent.style.position = "relative";
-    }
-    const layer = el("div", { position: "absolute", pointerEvents: "none", zIndex: "1", overflow: "hidden" });
-    layer.setAttribute("aria-hidden", "true");
-    node.after(layer);
-
-    // The image paints in its content box; keep the layer exactly there.
-    let edges;
-    const measure = () => {
-      const cs = getComputedStyle(node);
-      const px = (k) => parseFloat(cs[k]) || 0;
-      edges = {
-        l: px("borderLeftWidth") + px("paddingLeft"),
-        t: px("borderTopWidth") + px("paddingTop"),
-        r: px("borderRightWidth") + px("paddingRight"),
-        b: px("borderBottomWidth") + px("paddingBottom"),
-      };
-      layer.style.borderRadius = cs.borderRadius;
-    };
-    measure();
-    const box = () => {
-      const r = node.getBoundingClientRect();
-      return {
-        left: r.left + edges.l,
-        top: r.top + edges.t,
-        width: r.width - edges.l - edges.r,
-        height: r.height - edges.t - edges.b,
-      };
-    };
-    const place = () => {
-      const b = box();
-      const p = parent.getBoundingClientRect();
-      Object.assign(layer.style, {
-        left: `${b.left - p.left - parent.clientLeft + parent.scrollLeft}px`,
-        top: `${b.top - p.top - parent.clientTop + parent.scrollTop}px`,
-        width: `${b.width}px`,
-        height: `${b.height}px`,
-      });
-    };
-    place();
-    const observer = new ResizeObserver(() => {
-      measure();
-      place();
-    });
-    observer.observe(node);
-    cleanups.push(() => {
-      observer.disconnect();
-      layer.remove();
-    });
-
-    const cover = el("div", { position: "absolute", inset: "0", background: canvas }, layer);
-    const parts = regions.map((region) => {
-      const tile = el(
-        "div",
-        {
-          position: "absolute",
-          inset: "0",
-          backgroundImage: `url(${JSON.stringify(src)})`,
-          backgroundSize: "100% 100%",
-          clipPath: inset(region, 0),
-        },
-        layer,
-      );
-      const frameBox = el(
-        "div",
-        {
-          position: "absolute",
-          left: `${region.x}%`,
-          top: `${region.y}%`,
-          width: "0",
-          height: "0",
-          border: "1px solid",
-          background: "rgb(128 128 128 / 0.12)",
-          boxSizing: "border-box",
-          visibility: "hidden",
-        },
-        layer,
-      );
-      // Below the box, or inside its bottom edge when the box reaches the image's bottom.
-      const low = region.y + region.h > 92;
-      const badge = el(
-        "span",
-        {
-          position: "absolute",
-          left: "50%",
-          ...(low ? { bottom: "4px" } : { top: "100%", marginTop: "4px" }),
-          transform: "translateX(-50%)",
-          whiteSpace: "nowrap",
-          borderRadius: "3px",
-          padding: "1px 4px",
-          font: "500 10px/14px system-ui, sans-serif",
-          fontVariantNumeric: "tabular-nums",
-        },
-        frameBox,
-      );
-      return { region, tile, box: frameBox, badge };
-    });
-    return { node, cover, parts, box, place };
-  });
-  cleanups.push(() => parents.forEach((position, parent) => (parent.style.position = position)));
-  reveal();
-
-  // Cursors live in one fixed layer and follow their images through scroll and resize.
+  // Cursors and drag boxes live in one fixed layer and follow the page through scroll and resize.
   const stage = el("div", {
     position: "fixed",
     inset: "0",
@@ -274,18 +151,37 @@ export function swarmBuild(targets, options = {}) {
   stage.setAttribute("aria-hidden", "true");
   document.body.appendChild(stage);
   cleanups.push(() => stage.remove());
+  cleanups.push(prepare());
 
-  const tasks = layers.flatMap((layer, target) => layer.parts.map((part) => ({ target, part })));
-  const plan = assignTasks(tasks.length, agents.length);
-
-  /** An anchor is a point in percent of an image, or in viewport pixels (target = -1). */
-  const resolve = ({ target, x, y }) => {
-    if (target < 0) return { x, y };
-    const b = layers[target].box();
-    return { x: b.left + (x / 100) * b.width, y: b.top + (y / 100) * b.height };
+  // Scheduling: agents pull the first task that is in view and whose parent is built.
+  const wakers = new Set();
+  const wake = () => {
+    wakers.forEach((r) => r());
+    wakers.clear();
+  };
+  cleanups.push(observe(wake));
+  const next = async () => {
+    for (;;) {
+      if (state === "ended") throw ABORT;
+      const task = tasks.find((t) => !t.taken && (done || t.seen) && (!t.parent || t.parent.built));
+      if (task) {
+        task.taken = true;
+        return task;
+      }
+      if (tasks.every((t) => t.taken)) return null;
+      await new Promise((r) => wakers.add(r));
+    }
   };
 
-  const cursors = plan.map((_, a) => {
+  /** An anchor is a point in fractions of a task's rectangle, or in viewport pixels. */
+  const resolve = (a) => {
+    if (!a.task) return a;
+    const r = a.task.rect();
+    return { x: r.left + a.fx * r.width, y: r.top + a.fy * r.height };
+  };
+
+  const count = Math.max(1, Math.min(agents.length, tasks.length));
+  const cursors = Array.from({ length: count }, (_, a) => {
     const agent = { text: "#fff", ...agents[a % agents.length] };
     const node = el("div", { position: "absolute", left: "0", top: "0", transformOrigin: "0 0" }, stage);
     node.appendChild(cursorIcon(agent.color));
@@ -306,20 +202,30 @@ export function swarmBuild(targets, options = {}) {
     );
     label.textContent = agent.name;
     // Fan in from beyond the right half of the screen.
-    const angle = ((a + 0.5) / plan.length - 0.5) * Math.PI;
+    const angle = ((a + 0.5) / count - 0.5) * Math.PI;
     const offstage = () => {
       const reach = Math.hypot(innerWidth, innerHeight) * 0.6;
-      return { target: -1, x: innerWidth / 2 + Math.cos(angle) * reach, y: innerHeight / 2 + Math.sin(angle) * reach };
+      return { x: innerWidth / 2 + Math.cos(angle) * reach, y: innerHeight / 2 + Math.sin(angle) * reach };
     };
     return { agent, node, offstage, from: offstage(), to: offstage(), p: 1, ease: easeInOut, scale: 1 };
   });
 
-  const renderCursors = () => {
+  const boxes = new Set();
+  const render = () => {
+    onFrame();
     for (const c of cursors) {
       const a = resolve(c.from);
       const b = resolve(c.to);
       const t = c.ease(c.p);
       c.node.style.transform = `translate3d(${lerp(a.x, b.x, t)}px, ${lerp(a.y, b.y, t)}px, 0) scale(${c.scale})`;
+    }
+    for (const b of boxes) {
+      const r = b.task.rect();
+      Object.assign(b.node.style, {
+        transform: `translate3d(${r.left}px, ${r.top}px, 0)`,
+        width: `${b.e * r.width}px`,
+        height: `${b.e * r.height}px`,
+      });
     }
   };
 
@@ -334,48 +240,76 @@ export function swarmBuild(targets, options = {}) {
     });
   };
 
-  async function draw(c, { target, part }) {
-    const { region, tile, box, badge } = part;
-    const { node } = layers[target];
-    const width = node.naturalWidth || node.offsetWidth;
-    const height = node.naturalHeight || node.offsetHeight;
-    box.style.borderColor = c.agent.color;
-    Object.assign(badge.style, { background: c.agent.color, color: c.agent.text });
+  async function draw(c, task) {
+    const box = {
+      task,
+      e: 0,
+      node: el(
+        "div",
+        {
+          position: "absolute",
+          left: "0",
+          top: "0",
+          border: `1px solid ${c.agent.color}`,
+          borderRadius: task.radius ?? "0",
+          background: "rgb(128 128 128 / 0.10)",
+          boxSizing: "border-box",
+        },
+        stage,
+      ),
+    };
+    // Below the box, or inside its bottom edge when the box reaches the screen's bottom.
+    const badge = el(
+      "span",
+      {
+        position: "absolute",
+        left: "50%",
+        top: "100%",
+        marginTop: "4px",
+        transform: "translateX(-50%)",
+        whiteSpace: "nowrap",
+        borderRadius: "3px",
+        padding: "1px 4px",
+        font: "500 10px/14px system-ui, sans-serif",
+        fontVariantNumeric: "tabular-nums",
+        background: c.agent.color,
+        color: c.agent.text,
+      },
+      box.node,
+    );
 
-    await move(c, { target, x: region.x, y: region.y }, 0.7);
+    await move(c, { task, fx: 0, fy: 0 }, 0.7);
     c.scale = 0.85;
-    box.style.visibility = "visible";
-    const end = { target, x: region.x + region.w, y: region.y + region.h };
-    await move(c, end, 0.45 + region.w * region.h * 0.00012, easeInOut, (t) => {
-      const e = easeInOut(t);
-      box.style.width = `${e * region.w}%`;
-      box.style.height = `${e * region.h}%`;
-      badge.textContent = `${Math.round((e * region.w * width) / 100)} × ${Math.round((e * region.h * height) / 100)}`;
+    boxes.add(box);
+    const { width, height } = task.size();
+    if (task.rect().bottom > innerHeight - 24) Object.assign(badge.style, { top: "auto", bottom: "4px" });
+    const area = Math.min(1, (task.rect().width * task.rect().height) / (innerWidth * innerHeight));
+    await move(c, { task, fx: 1, fy: 1 }, 0.4 + area * 0.6, easeInOut, (t) => {
+      box.e = easeInOut(t);
+      badge.textContent = `${Math.round(box.e * width)} × ${Math.round(box.e * height)}`;
     });
     c.scale = 1;
-    await tween(0.45, (t) => (tile.style.clipPath = inset(region, easeOut(t) * region.h)));
-    tween(0.25, (t) => (box.style.opacity = String(1 - t))).catch(() => {});
+    await task.reveal(tween, c);
+    task.built = true;
+    wake();
+    tween(0.25, (t) => (box.node.style.opacity = String(1 - t)))
+      .catch(() => {})
+      .finally(() => {
+        boxes.delete(box);
+        box.node.remove();
+      });
   }
 
   async function run() {
-    const images = layers.map(({ node }) => node).filter((n) => n instanceof HTMLImageElement);
-    let timer;
-    await Promise.race([
-      Promise.all(images.map((img) => img.decode().catch(() => {}))),
-      new Promise((r) => (timer = setTimeout(r, 1000))),
-    ]);
-    clearTimeout(timer);
-    if (state === "ended") throw ABORT;
     frame = requestAnimationFrame(tick);
-
     await Promise.all(
       cursors.map(async (c, a) => {
         await tween(a * 0.2);
-        for (const i of plan[a]) await draw(c, tasks[i]);
+        for (let task = await next(); task; task = await next()) await draw(c, task);
       }),
     );
     const exits = cursors.map((c) => tween(0.2).then(() => move(c, c.offstage(), 0.9, easeIn)));
-    await tween(0.4, (t) => layers.forEach(({ cover }) => (cover.style.opacity = String(1 - t))));
+    await settleAll(tween);
     await Promise.all(exits);
   }
 
@@ -386,8 +320,8 @@ export function swarmBuild(targets, options = {}) {
     cancelAnimationFrame(frame);
     active.forEach((tw) => tw.reject(ABORT));
     active.clear();
-    cleanups.splice(0).forEach((fn) => fn());
-    reveal();
+    wake();
+    cleanups.splice(0).reverse().forEach((fn) => fn());
     if (completed) onDone?.();
     resolveFinished();
   };
@@ -406,33 +340,287 @@ export function swarmBuild(targets, options = {}) {
 
   if (start === "now") begin();
   else {
-    const trigger = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          trigger.disconnect();
-          begin();
-        }
-      },
-      { rootMargin: "0px 0px -15% 0px" },
-    );
-    items.forEach(({ node }) => trigger.observe(node));
-    cleanups.push(() => trigger.disconnect());
+    // Start once the first task scrolls into view.
+    const waitForView = async () => {
+      while (state === "idle" && !tasks.some((t) => t.seen)) await new Promise((r) => wakers.add(r));
+      begin();
+    };
+    waitForView();
   }
 
   return {
     finished,
-    /** Jumps to the finished image and removes the swarm; onDone runs. */
+    /** Jumps to the finished result and removes the swarm; onDone runs. */
     finish() {
       if (state === "idle") return end(true);
       if (state !== "running") return;
       done = true;
+      wake();
       [...active].forEach((tw) => settle(tw, 1));
     },
     /** Removes everything now, wherever the build is; onDone does not run. */
     destroy() {
       end(false);
     },
+    /** Changes the speed while it runs: 2 is twice as fast. */
+    setSpeed(value) {
+      if (value > 0) speed = value;
+    },
   };
+}
+
+/** Marks tasks as seen when their element scrolls into view. */
+function viewWatcher(tasks, nodeOf) {
+  return (wake) => {
+    const byNode = new Map();
+    tasks.forEach((t) => {
+      const node = nodeOf(t);
+      if (!byNode.has(node)) byNode.set(node, []);
+      byNode.get(node).push(t);
+    });
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          byNode.get(e.target)?.forEach((t) => (t.seen = true));
+          io.unobserve(e.target);
+        }
+        wake();
+      },
+      { rootMargin: "0px 0px -10% 0px" },
+    );
+    byNode.forEach((_, node) => io.observe(node));
+    return () => io.disconnect();
+  };
+}
+
+function shouldSkip(nodes) {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // The CSS fallback already showed the content: too late to build it.
+  const fallbackShown = nodes.some((node) =>
+    node.getAnimations?.().some((a) => a.animationName === "swarm-build-fallback" && a.playState === "finished"),
+  );
+  return reduced || fallbackShown || nodes.length === 0;
+}
+
+function normalizeImages(targets) {
+  const list = (Array.isArray(targets) ? targets : [targets]).filter(Boolean);
+  return list.flatMap((t) => {
+    const node = t instanceof Element ? t : t.el;
+    if (!node?.parentElement) return [];
+    const given = t instanceof Element ? null : t.regions;
+    const parsed = node.dataset.swarmRegions ? parseRegions(node.dataset.swarmRegions) : [];
+    const regions = given?.length ? given : parsed.length ? parsed : autoRegions();
+    const src = (t instanceof Element ? null : t.src) || imageSource(node);
+    if (!src) {
+      console.warn("swarm-build: no image URL for", node);
+      return [];
+    }
+    return [{ node, regions, src }];
+  });
+}
+
+/**
+ * Builds each target image region by region: a blank canvas covers the image and each region
+ * of it sweeps in after a cursor drags its box. `finished` always resolves. `onDone` runs once
+ * when the build completes or `finish()` is called, never after `destroy()`.
+ * @param {import("./swarm-build").Target | import("./swarm-build").Target[]} targets
+ * @param {import("./swarm-build").Options} [options]
+ * @returns {import("./swarm-build").SwarmBuild}
+ */
+export function swarmBuild(targets, options = {}) {
+  const items = normalizeImages(targets);
+  const unpend = () => items.forEach(({ node }) => node.removeAttribute("data-swarm-pending"));
+  if (shouldSkip(items.map((i) => i.node))) {
+    unpend();
+    options.onDone?.();
+    return stopped;
+  }
+  const { canvas = "#fff" } = options;
+  const layers = [];
+  const places = [];
+  const tasks = items.flatMap((item, target) =>
+    item.regions.map((region) => ({ item, target, region, seen: false })),
+  );
+
+  // The image paints in its content box; tasks measure against that.
+  const contentBox = (node) => {
+    const cs = getComputedStyle(node);
+    const px = (k) => parseFloat(cs[k]) || 0;
+    const r = node.getBoundingClientRect();
+    const l = px("borderLeftWidth") + px("paddingLeft");
+    const t = px("borderTopWidth") + px("paddingTop");
+    const width = r.width - l - px("borderRightWidth") - px("paddingRight");
+    const height = r.height - t - px("borderBottomWidth") - px("paddingBottom");
+    return { left: r.left + l, top: r.top + t, width, height, bottom: r.top + t + height };
+  };
+  tasks.forEach((task) => {
+    const { node } = task.item;
+    const { x, y, w, h } = task.region;
+    task.rect = () => {
+      const b = contentBox(node);
+      const r = { left: b.left + (x / 100) * b.width, top: b.top + (y / 100) * b.height };
+      return { ...r, width: (w / 100) * b.width, height: (h / 100) * b.height, bottom: r.top + (h / 100) * b.height };
+    };
+    task.size = () => ({
+      width: ((node.naturalWidth || node.offsetWidth) * w) / 100,
+      height: ((node.naturalHeight || node.offsetHeight) * h) / 100,
+    });
+    task.reveal = (tween) =>
+      tween(0.45, (t) => (layers[task.target].tiles.get(task).style.clipPath = inset(task.region, easeOut(t) * h)));
+  });
+
+  // Per image, inside its parent so the parent's rounded corners clip it: a blank canvas plus
+  // one tile of the image per region.
+  const prepare = () => {
+    const parents = new Map();
+    const undo = [];
+    items.forEach(({ node, src }, target) => {
+      const parent = node.parentElement;
+      if (!parents.has(parent)) {
+        parents.set(parent, parent.style.position);
+        if (["static", ""].includes(getComputedStyle(parent).position)) parent.style.position = "relative";
+      }
+      const layer = el("div", { position: "absolute", pointerEvents: "none", zIndex: "1", overflow: "hidden" });
+      layer.setAttribute("aria-hidden", "true");
+      node.after(layer);
+      const place = () => {
+        const b = contentBox(node);
+        const p = parent.getBoundingClientRect();
+        Object.assign(layer.style, {
+          left: `${b.left - p.left - parent.clientLeft + parent.scrollLeft}px`,
+          top: `${b.top - p.top - parent.clientTop + parent.scrollTop}px`,
+          width: `${b.width}px`,
+          height: `${b.height}px`,
+          borderRadius: getComputedStyle(node).borderRadius,
+        });
+      };
+      place();
+      places.push(place);
+      const observer = new ResizeObserver(place);
+      observer.observe(node);
+      const cover = el("div", { position: "absolute", inset: "0", background: canvas }, layer);
+      const tiles = new Map();
+      tasks
+        .filter((t) => t.target === target)
+        .forEach((t) =>
+          tiles.set(
+            t,
+            el(
+              "div",
+              {
+                position: "absolute",
+                inset: "0",
+                backgroundImage: `url(${JSON.stringify(src)})`,
+                backgroundSize: "100% 100%",
+                clipPath: inset(t.region, 0),
+              },
+              layer,
+            ),
+          ),
+        );
+      layers[target] = { cover, tiles };
+      undo.push(() => {
+        observer.disconnect();
+        layer.remove();
+      });
+    });
+    unpend();
+    return () => {
+      undo.forEach((fn) => fn());
+      parents.forEach((position, parent) => (parent.style.position = position));
+    };
+  };
+
+  const settleAll = (tween) => tween(0.4, (t) => layers.forEach(({ cover }) => (cover.style.opacity = String(1 - t))));
+  return runSwarm(tasks, {
+    prepare,
+    observe: viewWatcher(tasks, (t) => t.item.node),
+    settleAll,
+    onFrame: () => places.forEach((place) => place()),
+    options: { start: "visible", ...options },
+  });
+}
+
+/**
+ * Builds live page elements in place. Every block is hidden, then a cursor drags out its box and
+ * it sweeps in; plain-text blocks type themselves in. A block inside another block waits for it.
+ * Blocks below the fold wait until they scroll into view.
+ * @param {string | Element[] | NodeListOf<Element>} [blocks] selector or elements; default "[data-swarm-block]"
+ * @param {import("./swarm-build").PageOptions} [options]
+ * @returns {import("./swarm-build").SwarmBuild}
+ */
+export function swarmBuildPage(blocks = "[data-swarm-block]", options = {}) {
+  // Unique, connected and rendered: a display:none block would never scroll into view.
+  const list = typeof blocks === "string" ? document.querySelectorAll(blocks) : (blocks ?? []);
+  const nodes = [...new Set(list)].filter(
+    (n) => n instanceof Element && n.isConnected && n.checkVisibility?.() !== false,
+  );
+  const unpend = () => nodes.forEach((n) => n.removeAttribute("data-swarm-pending"));
+  if (shouldSkip(nodes)) {
+    unpend();
+    options.onDone?.();
+    return stopped;
+  }
+  const typeSpeed = options.typeSpeed > 0 ? options.typeSpeed : 1;
+
+  // Document order is reading order: top to bottom, parents before children.
+  const tasks = nodes.map((node) => ({ node, seen: false }));
+  const byNode = new Map(tasks.map((t) => [t.node, t]));
+  tasks.forEach((task) => {
+    for (let p = task.node.parentElement; p && !task.parent; p = p.parentElement) task.parent = byNode.get(p);
+    const { node } = task;
+    task.rect = () => node.getBoundingClientRect();
+    task.size = () => ({ width: node.offsetWidth, height: node.offsetHeight });
+    task.radius = getComputedStyle(node).borderRadius;
+    task.text = typeable(node);
+    task.reveal = async (tween) => {
+      if (!task.text) {
+        await tween(0.45, (t) => (node.style.clipPath = sweep(easeOut(t))));
+        node.style.clipPath = task.clip;
+        return;
+      }
+      // Type into one span holding a transparent copy of the rest, so the block keeps its size
+      // and a flex block still has a single child.
+      const original = [...node.childNodes];
+      const typed = document.createTextNode("");
+      const rest = el("span", { color: "transparent" });
+      const line = el("span");
+      line.append(typed, rest);
+      node.replaceChildren(line);
+      node.style.clipPath = task.clip;
+      const text = task.text;
+      const restore = () => node.replaceChildren(...original);
+      task.restore = restore;
+      await tween(Math.min(1.6, 0.15 + text.length * 0.03) / typeSpeed, (t) => {
+        const n = Math.round(t * text.length);
+        typed.data = text.slice(0, n);
+        rest.textContent = text.slice(n);
+      });
+      restore();
+      task.restore = null;
+    };
+  });
+
+  const prepare = () => {
+    tasks.forEach((t) => {
+      t.clip = hold(t.node);
+      t.node.style.clipPath = HIDDEN;
+    });
+    unpend();
+    return () =>
+      tasks.forEach((t) => {
+        t.restore?.();
+        release(t.node);
+      });
+  };
+
+  return runSwarm(tasks, {
+    prepare,
+    observe: viewWatcher(tasks, (t) => t.node),
+    settleAll: async () => {},
+    options,
+  });
 }
 
 /** Builds every element with a `data-swarm` attribute, each with its own swarm. */

@@ -28,6 +28,12 @@ export type Options = {
   onDone?: () => void;
 };
 
+/** Same as Options, but `start` defaults to "now" (or "visible": wait until a block is in view). */
+export type PageOptions = Omit<Options, "canvas"> & {
+  /** 2 types plain-text blocks twice as fast, on top of `speed`. Default 1. */
+  typeSpeed?: number;
+};
+
 export type SwarmBuild = {
   /** Resolves once the image is complete and the swarm is gone. */
   finished: Promise<void>;
@@ -35,11 +41,18 @@ export type SwarmBuild = {
   finish(): void;
   /** Remove everything now (for example on unmount). */
   destroy(): void;
+  /** Change the speed while it runs: 2 is twice as fast. */
+  setSpeed(speed: number): void;
 };
 
 export const DEFAULT_AGENTS: Agent[];
 export function swarmBuild(targets: Target | Target[], options?: Options): SwarmBuild;
+/**
+ * Builds live page elements in place: each block is hidden, a cursor drags out its box and it
+ * sweeps in; plain-text blocks type in. Nested blocks wait for their parent block, and blocks
+ * below the fold wait until they scroll into view.
+ */
+export function swarmBuildPage(blocks?: string | Element[] | NodeListOf<Element>, options?: PageOptions): SwarmBuild;
 export function swarmBuildAll(selector?: string, options?: Options): SwarmBuild[];
 export function parseRegions(text: string): Region[];
 export function autoRegions(): Region[];
-export function assignTasks(taskCount: number, agentCount: number): number[][];

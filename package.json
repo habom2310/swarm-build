@@ -1,7 +1,7 @@
 {
   "name": "swarm-build",
-  "version": "0.1.0",
-  "description": "A swarm of named cursors builds an image region by region, like a multiplayer design file. Dependency-free.",
+  "version": "0.2.0",
+  "description": "A swarm of named cursors builds your page or screenshot, block by block, like a multiplayer design file. Dependency-free.",
   "type": "module",
   "main": "./src/swarm-build.js",
   "types": "./src/swarm-build.d.ts",

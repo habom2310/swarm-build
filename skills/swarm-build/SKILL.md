@@ -1,14 +1,17 @@
 ---
 name: swarm-build
-description: Add the swarm-build animation to a website, where a swarm of named, coloured cursors draws boxes over a screenshot or product image and builds it region by region, like a multiplayer design file. Use when the user wants a hero or product image to "build itself", wants multiplayer or Figma-style cursors on a page, or names swarm-build. Works with plain HTML and any framework (React, Next.js, Vue, Svelte, Astro).
+description: Add the swarm-build animation to a website, where a swarm of named, coloured cursors draws boxes and builds a screenshot region by region, or rebuilds a whole live page block by block, like a multiplayer design file. Use when the user wants a hero or product image to "build itself", wants multiplayer or Figma-style cursors on a page, or names swarm-build. Works with plain HTML and any framework (React, Next.js, Vue, Svelte, Astro).
 ---
 
 # swarm-build
 
-swarm-build is one dependency-free ES module (`src/swarm-build.js`, about 400 lines) plus an optional CSS file (`src/swarm-build.css`).
-It targets images: an `<img>`, or an element with a CSS `background-image`.
-A blank canvas covers the image, cursors fly in, each drags out a box with a live `W × H` badge, and that part of the image sweeps in.
-The cursors then leave and every element the library added is removed.
+swarm-build is one dependency-free ES module (`src/swarm-build.js`, about 600 lines) plus an optional CSS file (`src/swarm-build.css`).
+It has two modes:
+
+- **Image mode**, `swarmBuild(img)`: a blank canvas covers an `<img>` (or an element with a CSS `background-image`), and each region of it sweeps in after a cursor drags out its box with a live `W × H` badge.
+- **Page mode**, `swarmBuildPage("[data-swarm-block]")`: the marked elements of a live page disappear, then the cursors rebuild them one by one. Plain-text blocks (headings, short paragraphs) type themselves in. A block inside another block waits for its parent. Blocks below the fold wait until they scroll into view, so the swarm follows the reader down the page.
+
+In both modes the cursors leave at the end and every change the library made is undone.
 
 ## 1. Install
 
@@ -17,7 +20,24 @@ There are no dependencies and no build step.
 
 Only if `npm view swarm-build` shows the package is published: `npm install swarm-build`, then `import { swarmBuild } from "swarm-build"` and `import "swarm-build/style.css"`.
 
-## 2. Choose the regions
+## 2a. Page mode: mark the blocks
+
+1. Read the page's markup and pick the blocks a designer would draw: nav bar, hero heading, hero paragraph, each button, each card, chart, table, footer. A typical landing page has 25 to 60.
+2. Add `data-swarm-block` to each one.
+   - Mark containers (a card) and the text inside them (its heading and paragraph) to get "frame first, then fill it in".
+   - Mark headings and short paragraphs whose content is plain text: those type in. Elements with inline markup (links, `<b>`) sweep in instead.
+   - Skip wrappers that only do layout (grids, sections without their own background). Hiding them hides everything inside at once.
+3. Do not mark fixed or sticky UI the visitor needs right away, such as a cookie banner or chat widget.
+4. Call it after the content is in the DOM:
+
+```js
+import { swarmBuildPage } from "./lib/swarm-build/swarm-build.js";
+swarmBuildPage("[data-swarm-block]", { speed: 1.5 });
+```
+
+To hide the blocks before the script runs (no flash of the finished page), also add `data-swarm-pending` to each block and include the CSS file.
+
+## 2b. Image mode: choose the regions
 
 Regions decide what gets built and in what order.
 Good regions are what makes the animation look intentional, so do not skip this step.
@@ -78,12 +98,16 @@ Several images (for example an iPad and a phone) can share one swarm: `swarmBuil
 | `canvas` | `"#fff"` | Colour of the unbuilt canvas; match the screenshot's background |
 | `zIndex` | `2147483000` | Stacking of the fixed cursor layer; lower it if a modal or header must stay on top |
 | `onDone` | none | Called once when the build completes or `finish()` is called |
+| `typeSpeed` (page mode) | `1` | Speed of typed text; `2` types twice as fast |
 
 The return value has `finished`, `finish()` and `destroy()`:
 
 - `finished` is a Promise that always resolves, however the swarm ends.
 - `finish()` jumps to the finished image, and `onDone` runs.
 - `destroy()` removes everything now, and `onDone` does not run. Call it on unmount.
+- `setSpeed(n)` changes the speed while it runs.
+
+In page mode `start` defaults to `"now"`; in image mode to `"visible"`.
 
 ## 5. Rules to keep
 
