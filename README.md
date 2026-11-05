@@ -1,4 +1,4 @@
-# swarm-build
+# Swarm Build
 
 A swarm of named, coloured cursors builds your page, like a multiplayer design file.
 Each cursor drags out a box with a live `W × H` badge, then that block sweeps or types in.

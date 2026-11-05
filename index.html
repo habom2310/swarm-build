@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>swarm-build: a cursor swarm builds your page</title>
+    <title>Swarm Build: let a swarm of cursors build your page</title>
     <meta
       name="description"
-      content="Ask your coding agent to use /swarm-build, and a swarm of named cursors rebuilds the page, block by block."
+      content="Swarm Build is an agent skill and a tiny JS module. Ask your coding agent, and a swarm of named cursors rebuilds your page block by block."
     />
     <style>
       :root {
@@ -57,7 +57,8 @@
       p {
         margin: 0;
       }
-      .mono {
+      .mono,
+      code {
         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       }
       .wrap {
@@ -100,26 +101,12 @@
         padding: 4px 10px;
         border-radius: 999px;
       }
-      section {
-        padding: 72px 0;
-      }
-      .section-head {
-        max-width: 620px;
-        margin-bottom: 32px;
-      }
-      .section-head h2 {
-        font-size: clamp(28px, 3.6vw, 40px);
-        line-height: 1.1;
-      }
-      .section-head p {
-        margin-top: 10px;
-      }
 
       /* Nav */
       nav.top {
         display: flex;
         align-items: center;
-        gap: 28px;
+        gap: 22px;
         padding: 18px 0;
         font-size: 15px;
       }
@@ -147,17 +134,19 @@
         text-decoration: none;
       }
 
-      /* Hero */
+      /* Hero: fills the first screen */
       .hero {
         display: grid;
         grid-template-columns: 1.05fr 0.95fr;
         gap: 48px;
         align-items: center;
-        padding: 56px 0 72px;
+        min-height: calc(100vh - 82px);
+        min-height: calc(100svh - 82px);
+        padding: 32px 0 120px;
       }
       .hero h1 {
         margin-top: 18px;
-        font-size: clamp(38px, 5.6vw, 64px);
+        font-size: clamp(40px, 5.8vw, 68px);
         line-height: 1.02;
         letter-spacing: -0.035em;
       }
@@ -172,106 +161,145 @@
         margin-top: 28px;
         flex-wrap: wrap;
       }
-      .art {
-        position: relative;
-        aspect-ratio: 1 / 0.86;
-      }
-      .art .plate {
-        position: absolute;
-        inset: 0 8% 10% 0;
-        border-radius: 24px;
-        background:
-          radial-gradient(circle at 25% 25%, #a5b4fc, transparent 55%),
-          radial-gradient(circle at 80% 30%, #67e8f9, transparent 50%),
-          radial-gradient(circle at 60% 85%, #f0abfc, transparent 55%),
-          #4338ca;
-      }
-      .art .float {
-        position: absolute;
-        right: 0;
-        bottom: 0;
-        width: 58%;
-        padding: 18px;
-        box-shadow: 0 24px 48px -20px rgb(20 20 40 / 0.35);
-      }
-      .float .row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 13px;
+      .install {
+        margin-top: 22px;
+        font-size: 14px;
         color: var(--muted);
       }
-      .float .big {
-        font-size: 30px;
-        font-weight: 700;
+      .install code {
         color: var(--ink);
-        letter-spacing: -0.02em;
+        background: var(--band);
+        padding: 2px 6px;
+        border-radius: 6px;
       }
-      .art .chip {
-        position: absolute;
-        left: 8%;
-        top: 12%;
+
+      /* Hero art: a page in a browser frame, half wireframe, half built */
+      .browser {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 30px 60px -28px rgb(20 20 40 / 0.35);
+        overflow: hidden;
+      }
+      .browser-bar {
         display: flex;
-        gap: 10px;
-        align-items: center;
-        padding: 10px 14px 10px 10px;
-        border-radius: 999px;
-        background: rgb(255 255 255 / 0.92);
-        font-size: 14px;
-        color: var(--ink);
-        font-weight: 600;
+        gap: 6px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
       }
-      .avatar {
-        display: grid;
-        place-items: center;
-        width: 34px;
-        height: 34px;
+      .browser-bar i {
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        font-size: 13px;
-        font-weight: 700;
-        color: #fff;
-        flex: none;
+        background: var(--line);
       }
-
-      /* Logos */
-      .logos {
-        display: flex;
-        justify-content: space-between;
-        gap: 24px;
-        flex-wrap: wrap;
-        padding: 24px 0 8px;
-        border-top: 1px solid var(--line);
-        color: #8d8c94;
-        font-weight: 700;
-        font-size: 19px;
-        letter-spacing: -0.01em;
-      }
-
-      /* Stats */
-      .stats {
+      .mock {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
+        gap: 12px;
+        padding: 18px;
       }
-      .stat .label {
-        font-size: 14px;
+      .mock .bar {
+        height: 12px;
+        border-radius: 6px;
+        background: var(--band);
+      }
+      .mock .title {
+        height: 26px;
+        width: 70%;
+        border-radius: 8px;
+        background: var(--ink);
+      }
+      .mock .row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .mock .tile {
+        height: 84px;
+        border-radius: 12px;
+      }
+      .mock .tile.a {
+        background: linear-gradient(135deg, #4338ca, #818cf8);
+      }
+      .mock .tile.b {
+        border: 1.5px dashed #a5b4fc;
+        background: rgb(67 56 202 / 0.05);
+      }
+      .mock .tile.c {
+        background: var(--band);
+      }
+      .mock .wide {
+        height: 70px;
+        border-radius: 12px;
+        border: 1.5px dashed #f9a8d4;
+        background: rgb(225 29 72 / 0.04);
+      }
+      .mock .label {
+        display: inline-block;
+        justify-self: start;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: #e11d48;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Gallery */
+      .gallery-section {
+        background: var(--band);
+        padding: 80px 0 96px;
+      }
+      .section-head {
+        max-width: 620px;
+        margin-bottom: 32px;
+      }
+      .section-head h2 {
+        font-size: clamp(30px, 3.8vw, 44px);
+        line-height: 1.1;
+      }
+      .section-head p {
+        margin-top: 10px;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+      .show {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 300px;
+      }
+      .kind {
+        align-self: flex-start;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
         color: var(--muted);
       }
-      .stat .value {
-        margin-top: 4px;
-        font-size: 32px;
-        font-weight: 700;
-        color: var(--ink);
-        letter-spacing: -0.02em;
+      .show h3 {
+        font-size: 20px;
       }
-      .stat svg {
-        display: block;
-        width: 100%;
-        height: 36px;
-        margin-top: 10px;
+      .show .sub {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      /* 1. Stat */
+      .big {
+        font-size: 56px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--ink);
+        letter-spacing: -0.03em;
       }
       .delta {
         display: inline-block;
-        margin-top: 6px;
         font-size: 13px;
         font-weight: 600;
         padding: 2px 8px;
@@ -279,54 +307,26 @@
         color: var(--good);
         background: var(--good-soft);
       }
-      .delta.down {
-        color: var(--bad);
-        background: var(--bad-soft);
+      .spark {
+        display: block;
+        width: 100%;
+        height: 70px;
+        margin-top: auto;
       }
-
-      /* Features */
-      .band {
-        background: var(--band);
-      }
-      .features {
+      .minis {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        font-size: 13px;
+        color: var(--muted);
       }
-      .icon {
-        display: grid;
-        place-items: center;
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        background: var(--accent-soft);
-        color: var(--accent);
+      .minis b {
+        display: block;
         font-size: 20px;
-        margin-bottom: 18px;
-      }
-      .features h3 {
-        font-size: 19px;
-      }
-      .features p {
-        margin-top: 6px;
-        font-size: 15px;
+        color: var(--ink);
       }
 
-      /* Chart + table */
-      .split {
-        display: grid;
-        grid-template-columns: 1.3fr 1fr;
-        gap: 16px;
-      }
-      .chart-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 12px;
-      }
-      .chart-head h3 {
-        font-size: 18px;
-      }
+      /* 2. Chart */
       .legend {
         display: flex;
         gap: 14px;
@@ -341,12 +341,14 @@
         margin-right: 6px;
         vertical-align: -1px;
       }
-      .chart svg {
+      .chart {
         display: block;
         width: 100%;
         height: auto;
-        margin-top: 18px;
+        margin-top: auto;
       }
+
+      /* 3. Table */
       table {
         width: 100%;
         border-collapse: collapse;
@@ -359,16 +361,19 @@
         color: var(--muted);
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        padding: 0 0 10px;
+        padding: 0 0 8px;
       }
       td {
-        padding: 12px 0;
+        padding: 10px 0;
         border-top: 1px solid var(--line);
         color: var(--ink);
       }
       td:last-child,
       th:last-child {
         text-align: right;
+      }
+      td code {
+        font-size: 13.5px;
       }
       .pill {
         display: inline-block;
@@ -390,121 +395,85 @@
         background: var(--bad-soft);
       }
 
-      /* Pricing */
-      .pricing {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-        align-items: stretch;
-      }
-      .tier {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-      }
-      .tier h3 {
-        font-size: 18px;
-      }
-      .price {
-        font-size: 42px;
-        font-weight: 700;
-        color: var(--ink);
-        letter-spacing: -0.03em;
-        line-height: 1;
-      }
-      .price small {
-        font-size: 15px;
-        font-weight: 500;
-        color: var(--muted);
-        letter-spacing: 0;
-      }
-      .tier ul {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        font-size: 15px;
-        display: grid;
-        gap: 8px;
-      }
-      .tier li::before {
-        content: "✓";
-        color: var(--accent);
-        font-weight: 700;
-        margin-right: 8px;
-      }
-      .tier .btn {
-        margin-top: auto;
-      }
-      .tier.featured {
+      /* 4. Plan */
+      .plan {
         background: var(--ink);
         border-color: var(--ink);
         color: #c9c9d1;
       }
-      .tier.featured h3,
-      .tier.featured .price {
-        color: #fff;
-      }
-      .tier.featured .price small {
+      .plan .kind {
         color: #a1a1aa;
       }
-      .tier.featured li::before {
-        color: #a5b4fc;
-      }
-
-      /* Gallery */
-      .gallery {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr;
-        grid-template-rows: 180px 180px;
-        gap: 16px;
-      }
-      .tile {
-        border-radius: var(--radius);
-        padding: 18px;
-        display: flex;
-        align-items: flex-end;
+      .plan h3 {
         color: #fff;
-        font-weight: 600;
+      }
+      .price {
+        font-size: 48px;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff;
+        letter-spacing: -0.03em;
+      }
+      .price small {
+        font-size: 15px;
+        font-weight: 500;
+        color: #a1a1aa;
+        letter-spacing: 0;
+      }
+      .plan ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
         font-size: 15px;
       }
-      .tile:first-child {
-        grid-row: span 2;
-        background: linear-gradient(160deg, #312e81, #7c3aed 60%, #f472b6);
-        font-size: 22px;
+      .plan li::before {
+        content: "✓";
+        color: #a5b4fc;
+        font-weight: 700;
+        margin-right: 8px;
       }
-      .t2 {
-        background: linear-gradient(135deg, #0e7490, #22d3ee);
-      }
-      .t3 {
-        background: linear-gradient(135deg, #b45309, #fbbf24);
-      }
-      .t4 {
-        background: linear-gradient(135deg, #166534, #4ade80);
-      }
-      .t5 {
-        background: linear-gradient(135deg, #9f1239, #fb7185);
+      .plan .btn {
+        margin-top: auto;
+        background: #fff;
+        border-color: #fff;
       }
 
-      /* Quote + form */
+      /* 5. Quote */
       .quote blockquote {
         margin: 0;
-        font-size: clamp(22px, 2.6vw, 28px);
+        font-size: clamp(22px, 2.4vw, 26px);
         line-height: 1.35;
         color: var(--ink);
-        letter-spacing: -0.015em;
         font-weight: 600;
+        letter-spacing: -0.015em;
       }
       .who {
         display: flex;
         gap: 12px;
         align-items: center;
-        margin-top: 22px;
+        margin-top: auto;
         font-size: 15px;
       }
       .who b {
-        color: var(--ink);
         display: block;
+        color: var(--ink);
       }
+      .avatar {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex: none;
+      }
+      .avatar svg {
+        width: 18px;
+        height: 22px;
+      }
+
+      /* 6. Form */
       form {
         display: grid;
         gap: 14px;
@@ -514,7 +483,8 @@
         font-weight: 600;
         color: var(--ink);
       }
-      input[type="email"] {
+      input[type="text"] {
+        display: block;
         width: 100%;
         height: 46px;
         margin-top: 6px;
@@ -539,6 +509,9 @@
         position: relative;
         flex: none;
       }
+      .switch.off {
+        background: #d4d4d8;
+      }
       .switch::after {
         content: "";
         position: absolute;
@@ -549,9 +522,75 @@
         border-radius: 50%;
         background: #fff;
       }
-      footer {
+      .switch.off::after {
+        right: auto;
+        left: 3px;
+      }
+
+      /* 7. Media */
+      .media {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 10px;
+        flex: 1;
+        min-height: 200px;
+      }
+      .shot {
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        align-items: flex-end;
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .shot:first-child {
+        grid-row: span 2;
+        background: linear-gradient(160deg, #312e81, #7c3aed 60%, #f472b6);
+        font-size: 18px;
+      }
+      .s2 {
+        background: linear-gradient(135deg, #0e7490, #22d3ee);
+      }
+      .s3 {
+        background: linear-gradient(135deg, #b45309, #fbbf24);
+      }
+
+      /* 8. Feed */
+      .feed {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 2px;
+      }
+      .feed li {
+        display: grid;
+        grid-template-columns: 12px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 9px 0;
         border-top: 1px solid var(--line);
-        padding: 28px 0 200px;
+        font-size: 15px;
+        color: var(--ink);
+      }
+      .feed li:first-child {
+        border-top: 0;
+      }
+      .feed i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .feed time {
+        font-size: 13px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      footer {
+        padding: 28px 0 220px;
         font-size: 14px;
         color: var(--muted);
         display: flex;
@@ -761,24 +800,13 @@
       }
 
       @media (max-width: 900px) {
-        .hero,
-        .split {
+        .hero {
           grid-template-columns: 1fr;
-        }
-        .stats {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .features,
-        .pricing {
-          grid-template-columns: 1fr;
+          min-height: 0;
+          padding-bottom: 72px;
         }
         .gallery {
-          grid-template-columns: 1fr 1fr;
-          grid-template-rows: 200px 130px 130px;
-        }
-        .tile:first-child {
-          grid-row: auto;
-          grid-column: span 2;
+          grid-template-columns: 1fr;
         }
         .links {
           display: none;
@@ -808,198 +836,176 @@
     </style>
   </head>
   <body>
-    <!-- The demo site. Every data-swarm-block is built by the swarm after Run. -->
+    <!-- Every data-swarm-block is rebuilt by the swarm after Run. All names and numbers are made up. -->
     <div class="wrap">
       <nav class="top" data-swarm-block>
-        <span class="logo"><i></i>Lumen</span>
-        <span class="links"><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#stories">Stories</a></span>
-        <a class="btn primary" href="https://github.com/habom2310/swarm-build">Get swarm-build</a>
+        <span class="logo"><i></i>Swarm Build</span>
+        <span class="links"><a href="#gallery">Gallery</a><a href="https://github.com/habom2310/swarm-build/blob/main/skills/swarm-build/SKILL.md">Skill</a></span>
+        <a class="btn primary" href="https://github.com/habom2310/swarm-build">GitHub</a>
       </nav>
 
       <header class="hero">
         <div>
-          <span class="eyebrow" data-swarm-block>New: live dashboards</span>
-          <h1 data-swarm-block>Analytics your whole team reads.</h1>
-          <p class="lede" data-swarm-block>Lumen turns raw events into dashboards, alerts and weekly reports, without a single query.</p>
+          <span class="eyebrow" data-swarm-block>Agent skill + tiny JS module</span>
+          <h1 data-swarm-block>Let a swarm build your page.</h1>
+          <p class="lede" data-swarm-block>Ask your coding agent for /swarm-build. It marks the blocks, and a swarm of named cursors rebuilds the page in front of your visitors.</p>
           <div class="actions">
-            <a class="btn primary" href="#pricing" data-swarm-block>Start free</a>
-            <a class="btn" href="#features" data-swarm-block>See how it works</a>
+            <a class="btn primary" href="https://github.com/habom2310/swarm-build" data-swarm-block>Get the skill</a>
+            <a class="btn" href="#gallery" data-swarm-block>See the gallery</a>
           </div>
+          <p class="install" data-swarm-block>No dependencies. Works with any framework. Respects reduced motion.</p>
         </div>
-        <div class="art">
-          <div class="plate" data-swarm-block></div>
-          <div class="chip" data-swarm-block><span class="avatar" style="background: #0e7490">JS</span>Jo shared a dashboard</div>
-          <div class="card float" data-swarm-block>
-            <div class="row"><span>Weekly active</span><span class="delta">+18%</span></div>
-            <div class="big">48,210</div>
-            <svg viewBox="0 0 200 50" aria-hidden="true">
-              <path d="M0 40 L25 34 L50 37 L75 24 L100 28 L125 16 L150 20 L175 8 L200 12" fill="none" stroke="#4338ca" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+        <div class="browser" data-swarm-block>
+          <div class="browser-bar"><i></i><i></i><i></i></div>
+          <div class="mock">
+            <div class="title" data-swarm-block></div>
+            <div class="bar" style="width: 90%" data-swarm-block></div>
+            <div class="bar" style="width: 62%" data-swarm-block></div>
+            <div class="row">
+              <div class="tile a" data-swarm-block></div>
+              <div class="tile b" data-swarm-block></div>
+              <div class="tile c" data-swarm-block></div>
+            </div>
+            <div class="wide" data-swarm-block></div>
+            <span class="label" data-swarm-block>480 × 72</span>
           </div>
         </div>
       </header>
-
-      <div class="logos" data-swarm-block>
-        <span>Northwind</span><span>Kettle&amp;Co</span><span>Parcel</span><span>Brightline</span><span>Oakhouse</span>
-      </div>
     </div>
 
-    <section>
-      <div class="wrap">
-        <div class="stats">
-          <div class="card stat" data-swarm-block>
-            <div class="label">Revenue</div>
-            <div class="value">$84.2k</div>
-            <span class="delta">+12.4%</span>
-            <svg viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 L20 26 L40 28 L60 18 L80 20 L100 10 L120 6" fill="none" stroke="#15803d" stroke-width="2.5" /></svg>
-          </div>
-          <div class="card stat" data-swarm-block>
-            <div class="label">Signups</div>
-            <div class="value">1,284</div>
-            <span class="delta">+6.1%</span>
-            <svg viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true"><path d="M0 28 L20 30 L40 22 L60 24 L80 14 L100 16 L120 10" fill="none" stroke="#4338ca" stroke-width="2.5" /></svg>
-          </div>
-          <div class="card stat" data-swarm-block>
-            <div class="label">Churn</div>
-            <div class="value">2.3%</div>
-            <span class="delta down">+0.4%</span>
-            <svg viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true"><path d="M0 24 L20 22 L40 26 L60 20 L80 18 L100 14 L120 12" fill="none" stroke="#b91c1c" stroke-width="2.5" /></svg>
-          </div>
-          <div class="card stat" data-swarm-block>
-            <div class="label">Uptime</div>
-            <div class="value">99.98%</div>
-            <span class="delta">30 days</span>
-            <svg viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true"><path d="M0 12 L120 12" fill="none" stroke="#0e7490" stroke-width="2.5" stroke-dasharray="3 4" /></svg>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="band" id="features">
+    <section class="gallery-section" id="gallery">
       <div class="wrap">
         <div class="section-head">
-          <h2 data-swarm-block>Everything in one place.</h2>
-          <p data-swarm-block>Connect your sources once. Lumen keeps every chart, alert and report up to date.</p>
+          <h2 data-swarm-block>Every kind of block.</h2>
+          <p data-swarm-block>Cards, charts, tables, forms and media all build the same way: drag the box, then fill it in.</p>
         </div>
-        <div class="features">
-          <div class="card" data-swarm-block>
-            <div class="icon">◎</div>
-            <h3 data-swarm-block>Live dashboards</h3>
-            <p data-swarm-block>Charts refresh as events arrive, so standups start with today's numbers.</p>
-          </div>
-          <div class="card" data-swarm-block>
-            <div class="icon">⚑</div>
-            <h3 data-swarm-block>Smart alerts</h3>
-            <p data-swarm-block>Get a message when a metric moves more than usual, not every time it twitches.</p>
-          </div>
-          <div class="card" data-swarm-block>
-            <div class="icon">✉</div>
-            <h3 data-swarm-block>Weekly reports</h3>
-            <p data-swarm-block>A short email every Monday with what changed and why it matters.</p>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <section>
-      <div class="wrap split">
-        <div class="card chart" data-swarm-block>
-          <div class="chart-head">
-            <h3>Sessions by channel</h3>
-            <div class="legend"><span><i style="background: #4338ca"></i>Organic</span><span><i style="background: #a5b4fc"></i>Paid</span></div>
-          </div>
-          <svg viewBox="0 0 420 220" aria-label="Bar chart of sessions over seven weeks">
-            <g stroke="#ecebe5"><path d="M0 40H420M0 100H420M0 160H420" /></g>
-            <g fill="#a5b4fc">
-              <rect x="14" y="120" width="40" height="80" rx="5" /><rect x="74" y="104" width="40" height="96" rx="5" /><rect x="134" y="130" width="40" height="70" rx="5" /><rect x="194" y="90" width="40" height="110" rx="5" /><rect x="254" y="98" width="40" height="102" rx="5" /><rect x="314" y="74" width="40" height="126" rx="5" /><rect x="374" y="84" width="40" height="116" rx="5" />
-            </g>
-            <g fill="#4338ca">
-              <rect x="14" y="150" width="40" height="50" rx="5" /><rect x="74" y="136" width="40" height="64" rx="5" /><rect x="134" y="156" width="40" height="44" rx="5" /><rect x="194" y="120" width="40" height="80" rx="5" /><rect x="254" y="128" width="40" height="72" rx="5" /><rect x="314" y="100" width="40" height="100" rx="5" /><rect x="374" y="112" width="40" height="88" rx="5" />
-            </g>
-          </svg>
-        </div>
-        <div class="card" data-swarm-block>
-          <table>
-            <thead><tr><th>Report</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td>Weekly summary</td><td><span class="pill ok">Sent</span></td></tr>
-              <tr><td>Churn by plan</td><td><span class="pill ok">Sent</span></td></tr>
-              <tr><td>Q4 forecast</td><td><span class="pill wait">Running</span></td></tr>
-              <tr><td>Ad spend sync</td><td><span class="pill fail">Failed</span></td></tr>
-              <tr><td>Cohort retention</td><td><span class="pill wait">Queued</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="band" id="pricing">
-      <div class="wrap">
-        <div class="section-head">
-          <h2 data-swarm-block>Simple pricing.</h2>
-          <p data-swarm-block>Start free. Upgrade when your team does.</p>
-        </div>
-        <div class="pricing">
-          <div class="card tier" data-swarm-block>
-            <h3>Starter</h3>
-            <div class="price">$0 <small>/ month</small></div>
-            <ul><li>3 dashboards</li><li>Daily refresh</li><li>Email support</li></ul>
-            <a class="btn" href="#">Start free</a>
-          </div>
-          <div class="card tier featured" data-swarm-block>
-            <h3>Team</h3>
-            <div class="price">$24 <small>/ seat / month</small></div>
-            <ul><li>Unlimited dashboards</li><li>Live refresh and alerts</li><li>Weekly reports</li></ul>
-            <a class="btn primary" href="#">Try Team</a>
-          </div>
-          <div class="card tier" data-swarm-block>
-            <h3>Enterprise</h3>
-            <div class="price">Custom</div>
-            <ul><li>SSO and audit log</li><li>Data residency</li><li>A named engineer</li></ul>
-            <a class="btn" href="#">Talk to us</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <div class="wrap">
-        <div class="section-head">
-          <h2 data-swarm-block>Made for every team.</h2>
-        </div>
         <div class="gallery">
-          <div class="tile" data-swarm-block>Product</div>
-          <div class="tile t2" data-swarm-block>Growth</div>
-          <div class="tile t3" data-swarm-block>Sales</div>
-          <div class="tile t4" data-swarm-block>Support</div>
-          <div class="tile t5" data-swarm-block>Finance</div>
-        </div>
-      </div>
-    </section>
+          <!-- 1. Stat -->
+          <article class="card show" data-swarm-block>
+            <span class="kind">Stat card</span>
+            <div>
+              <h3 data-swarm-block>Blocks built this run</h3>
+              <p class="sub">Demo page, all agents</p>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 12px">
+              <span class="big" data-swarm-block>128</span>
+              <span class="delta" data-swarm-block>+24 vs last run</span>
+            </div>
+            <div class="minis" data-swarm-block>
+              <span><b>6</b>agents</span><span><b>9.4s</b>to build</span><span><b>0</b>layout shifts</span>
+            </div>
+            <svg class="spark" viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true" data-swarm-block>
+              <path d="M0 60 L30 52 L60 56 L90 40 L120 44 L150 30 L180 34 L210 20 L240 24 L270 10 L300 14 L300 70 L0 70Z" fill="#e8e7fb" />
+              <path d="M0 60 L30 52 L60 56 L90 40 L120 44 L150 30 L180 34 L210 20 L240 24 L270 10 L300 14" fill="none" stroke="#4338ca" stroke-width="2.5" />
+            </svg>
+          </article>
 
-    <section class="band" id="stories">
-      <div class="wrap split">
-        <div class="card quote" data-swarm-block>
-          <blockquote data-swarm-block>"We replaced four spreadsheets and a Monday meeting with one Lumen dashboard."</blockquote>
-          <div class="who">
-            <span class="avatar" style="background: #9f1239">PR</span>
-            <span><b>Priya Raman</b>Head of Ops, Kettle&amp;Co</span>
-          </div>
-        </div>
-        <div class="card" data-swarm-block>
-          <form onsubmit="return false">
-            <h3 data-swarm-block>Get the weekly digest</h3>
-            <label>Work email<input type="email" placeholder="you@company.com" /></label>
-            <div class="toggle"><span class="switch"></span>Include product updates</div>
-            <button class="btn primary" type="button">Subscribe</button>
-          </form>
+          <!-- 2. Chart -->
+          <article class="card show" data-swarm-block>
+            <span class="kind">Chart</span>
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap">
+              <h3 data-swarm-block>Blocks per agent</h3>
+              <div class="legend"><span><i style="background: #4338ca"></i>Boxes</span><span><i style="background: #a5b4fc"></i>Typed</span></div>
+            </div>
+            <svg class="chart" viewBox="0 0 420 200" aria-label="Bar chart of boxes and typed blocks for six agents" data-swarm-block>
+              <g stroke="#ecebe5"><path d="M0 30H420M0 90H420M0 150H420" /></g>
+              <g fill="#a5b4fc">
+                <rect x="18" y="96" width="48" height="74" rx="5" /><rect x="88" y="80" width="48" height="90" rx="5" /><rect x="158" y="110" width="48" height="60" rx="5" /><rect x="228" y="70" width="48" height="100" rx="5" /><rect x="298" y="88" width="48" height="82" rx="5" /><rect x="368" y="60" width="48" height="110" rx="5" />
+              </g>
+              <g fill="#4338ca">
+                <rect x="18" y="126" width="48" height="44" rx="5" /><rect x="88" y="112" width="48" height="58" rx="5" /><rect x="158" y="134" width="48" height="36" rx="5" /><rect x="228" y="100" width="48" height="70" rx="5" /><rect x="298" y="118" width="48" height="52" rx="5" /><rect x="368" y="92" width="48" height="78" rx="5" />
+              </g>
+              <g font-size="12" fill="#6b6b73" text-anchor="middle" font-family="system-ui, sans-serif">
+                <text x="42" y="192">Ava</text><text x="112" y="192">Kai</text><text x="182" y="192">Noor</text><text x="252" y="192">Theo</text><text x="322" y="192">Mia</text><text x="392" y="192">Ravi</text>
+              </g>
+            </svg>
+          </article>
+
+          <!-- 3. Table -->
+          <article class="card show" data-swarm-block>
+            <span class="kind">Table</span>
+            <h3 data-swarm-block>Recent builds</h3>
+            <table data-swarm-block>
+              <thead><tr><th>Page</th><th>Blocks</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><code>index.html</code></td><td>43</td><td><span class="pill ok">Built</span></td></tr>
+                <tr><td><code>pricing.html</code></td><td>27</td><td><span class="pill ok">Built</span></td></tr>
+                <tr><td><code>docs/start.md</code></td><td>18</td><td><span class="pill wait">Building</span></td></tr>
+                <tr><td><code>blog/post.html</code></td><td>35</td><td><span class="pill wait">Queued</span></td></tr>
+                <tr><td><code>legacy.html</code></td><td>9</td><td><span class="pill fail">No blocks</span></td></tr>
+              </tbody>
+            </table>
+          </article>
+
+          <!-- 4. Plan -->
+          <article class="card show plan" data-swarm-block>
+            <span class="kind">Plan card</span>
+            <h3 data-swarm-block>Open source</h3>
+            <div class="price" data-swarm-block>$0 <small>/ forever</small></div>
+            <ul data-swarm-block>
+              <li>Page mode and image mode</li>
+              <li>Agent skill for any coding agent</li>
+              <li>One file, no build step</li>
+              <li>MIT licence</li>
+            </ul>
+            <a class="btn" href="https://github.com/habom2310/swarm-build" data-swarm-block>Copy the files</a>
+          </article>
+
+          <!-- 5. Quote -->
+          <article class="card show quote" data-swarm-block>
+            <span class="kind">Testimonial</span>
+            <blockquote data-swarm-block>"I drew forty boxes before the coffee was ready, and every one landed on a real block."</blockquote>
+            <div class="who" data-swarm-block>
+              <span class="avatar" style="background: #fef3c7">
+                <svg viewBox="0 0 16 20" aria-hidden="true"><path d="M1.5 1.5v15l4-4 3 6.2 2.6-1.2-3-6.1h5.6z" fill="#f59e0b" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" /></svg>
+              </span>
+              <span><b>Theo</b>Cursor #4, swarm member</span>
+            </div>
+          </article>
+
+          <!-- 6. Form -->
+          <article class="card show" data-swarm-block>
+            <span class="kind">Form</span>
+            <h3 data-swarm-block>Configure a build</h3>
+            <form onsubmit="return false" data-swarm-block>
+              <label>Blocks selector<input type="text" value="[data-swarm-block]" /></label>
+              <div class="toggle"><span class="switch"></span>Type plain-text blocks</div>
+              <div class="toggle"><span class="switch off"></span>Wait for blocks below the fold</div>
+              <button class="btn primary" type="button">Start the swarm</button>
+            </form>
+          </article>
+
+          <!-- 7. Media -->
+          <article class="card show" data-swarm-block>
+            <span class="kind">Media grid</span>
+            <h3 data-swarm-block>Built with Swarm Build</h3>
+            <div class="media">
+              <div class="shot" data-swarm-block>Landing page</div>
+              <div class="shot s2" data-swarm-block>Docs</div>
+              <div class="shot s3" data-swarm-block>Pricing</div>
+            </div>
+          </article>
+
+          <!-- 8. Feed -->
+          <article class="card show" data-swarm-block>
+            <span class="kind">Activity feed</span>
+            <h3 data-swarm-block>Build log</h3>
+            <ol class="feed" data-swarm-block>
+              <li><i style="background: #2563eb"></i>Ava drew the nav bar<time>0.4s</time></li>
+              <li><i style="background: #e11d48"></i>Kai typed the headline<time>1.1s</time></li>
+              <li><i style="background: #16a34a"></i>Noor framed the stat card<time>1.8s</time></li>
+              <li><i style="background: #f59e0b"></i>Theo filled in the chart<time>2.6s</time></li>
+              <li><i style="background: #9333ea"></i>Mia swept in the gallery<time>3.3s</time></li>
+            </ol>
+          </article>
         </div>
       </div>
     </section>
 
     <div class="wrap">
       <footer data-swarm-block>
-        <span>Lumen is a made-up product for the swarm-build demo.</span>
+        <span>Swarm Build. Everything on this page is made up for the demo.</span>
         <span>MIT · <a href="https://github.com/habom2310/swarm-build">GitHub</a> · Idea from <a href="https://califa.github.io/swarm-site/">Swarm</a> by Joel Califa</span>
       </footer>
     </div>
@@ -1008,7 +1014,7 @@
     <aside class="dock" id="dock" aria-label="Coding agent demo">
       <div class="dock-bar">
         <span class="dots"><i></i><i></i><i></i></span>
-        <span class="mono">~/lumen-site</span>
+        <span class="mono">~/my-site</span>
         <span class="steps" id="steps"><span data-step="1">Ask</span><span data-step="2">Plan</span><span data-step="3">Build</span></span>
       </div>
       <ol class="log mono" id="log" aria-live="polite"></ol>
@@ -1061,7 +1067,7 @@
 
       async function intro() {
         step(1);
-        log("Your coding agent, with the swarm-build skill installed.", "note");
+        log("Your coding agent, with the Swarm Build skill installed.", "note");
         await sleep(800);
         for (let i = 1; i <= PROMPT.length; i++) {
           $("typed").classList.remove("empty");
@@ -1081,7 +1087,7 @@
         await sleep(400);
         log("Read <em>skills/swarm-build/SKILL.md</em>", "ok");
         await sleep(450);
-        log(`Marked ${blocks().length} blocks with <em>data-swarm-block</em>: nav, hero, stat cards, features, chart, table, pricing, gallery, quote, form`, "ok");
+        log(`Marked ${blocks().length} blocks with <em>data-swarm-block</em>: nav, hero, and 8 gallery cards`, "ok");
         await sleep(600);
         log("Added <em>swarmBuildPage()</em> on load", "ok");
         await sleep(400);
@@ -1093,7 +1099,7 @@
         stopTour();
         window.scrollTo({ top: 0, behavior: "instant" });
         step(3);
-        log("Swarm started. Scroll down: blocks unlock as they come into view.");
+        log("Swarm started. Scroll down: the gallery builds as it comes into view.");
         $("controls").hidden = false;
         $("again").hidden = true;
         $("skip").hidden = false;
