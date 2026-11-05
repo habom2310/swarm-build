@@ -4,10 +4,10 @@
 export const DEFAULT_AGENTS = [
   { name: "Ava", color: "#2563eb", text: "#fff" },
   { name: "Kai", color: "#e11d48", text: "#fff" },
-  { name: "Noor", color: "#16a34a", text: "#fff" },
+  { name: "Noor", color: "#15803d", text: "#fff" },
   { name: "Theo", color: "#f59e0b", text: "#17171a" },
   { name: "Mia", color: "#9333ea", text: "#fff" },
-  { name: "Ravi", color: "#0891b2", text: "#fff" },
+  { name: "Ravi", color: "#0e7490", text: "#fff" },
 ];
 
 /** A header, a sidebar, a main block and two cards: a fallback for when no regions are given. */
@@ -207,7 +207,10 @@ function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, opti
       const reach = Math.hypot(innerWidth, innerHeight) * 0.6;
       return { x: innerWidth / 2 + Math.cos(angle) * reach, y: innerHeight / 2 + Math.sin(angle) * reach };
     };
-    return { agent, node, offstage, from: offstage(), to: offstage(), p: 1, ease: easeInOut, scale: 1 };
+    const start = offstage();
+    // Place it offstage now, so it never flashes at the top-left before the first frame.
+    node.style.transform = `translate3d(${start.x}px, ${start.y}px, 0)`;
+    return { agent, node, offstage, from: start, to: start, p: 1, ease: easeInOut, scale: 1 };
   });
 
   const boxes = new Set();
