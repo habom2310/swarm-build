@@ -113,6 +113,7 @@ In page mode `start` defaults to `"now"`; in image mode to `"visible"`.
 
 - `data-swarm-pending` plus the CSS file keep the image hidden until the script starts, so it does not flash finished first. If the script never runs, the CSS shows the image after 4 seconds. Leave the attribute off when the image is the page's LCP element and load time matters more than the effect.
 - Reduced motion (`prefers-reduced-motion: reduce`) shows the finished image and never animates. Do not override this.
+- In page mode, hidden blocks are `inert` until they start to appear, so keyboard focus never lands on something invisible. If a block holds the control that started the build, move focus somewhere visible (for example a Finish button).
 - Cursors live in a fixed, full-viewport layer above the page (`pointer-events: none`).
 - While it runs, the library inserts an overlay right after the image, inside the image's parent. If the parent was static, it also sets `position: relative` on it. Both are undone at the end.
   - Give the image a block-level parent of its own, such as a `<div>` or `<figure>`. Inline parents like `<a>` or `<picture>` can misplace the overlay.

@@ -166,6 +166,13 @@
       body.building .cursor.static {
         visibility: hidden;
       }
+      /* While the swarm works, the page reads as a design canvas, not a blank screen. */
+      body.building,
+      body.building .gallery-section,
+      body.building .use {
+        background-image: radial-gradient(color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1.4px);
+        background-size: 22px 22px;
+      }
 
       /* Nav */
       nav.top {
@@ -301,6 +308,8 @@
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
+        /* Room for the size tag under the tiles */
+        margin-bottom: 14px;
       }
       .mock .tile {
         height: 86px;
@@ -736,6 +745,86 @@
         font-variant-numeric: tabular-nums;
       }
 
+      /* Use it */
+      .use {
+        padding: 88px 0 96px;
+      }
+      .use-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 40px;
+      }
+      .use-grid > div {
+        min-width: 0;
+      }
+      .use h3 {
+        font-size: 20px;
+      }
+      .use-grid p {
+        margin-top: 8px;
+        max-width: 52ch;
+      }
+      .code {
+        display: flex;
+        align-items: flex-start;
+        margin-top: 16px;
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--term);
+        color: var(--term-text);
+      }
+      .code pre {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        padding: 16px 0 16px 18px;
+        font-size: 13.5px;
+        line-height: 1.65;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--term-line) transparent;
+      }
+      /* Commands keep their lines and scroll; the prompt is prose, so it wraps. */
+      .code.prose pre {
+        white-space: pre-wrap;
+      }
+      .code .copy {
+        flex: none;
+        margin: 10px;
+        min-height: 32px;
+        padding: 0 12px;
+        border-radius: 7px;
+        border: 1px solid var(--term-line);
+        background: var(--term-raised);
+        color: var(--term-text);
+        font: inherit;
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .code .copy:hover {
+        color: #fff;
+        border-color: #44444c;
+      }
+      .code :focus-visible {
+        outline-color: #fff;
+      }
+      .code .k {
+        color: #93c5fd;
+      }
+      .modes {
+        margin: 40px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 40px;
+        font-size: 15px;
+      }
+      .modes b {
+        color: var(--ink);
+      }
+
       footer {
         border-top: 1px solid var(--line);
         padding: 28px 0 calc(var(--dock-h, 200px) + 56px);
@@ -759,7 +848,8 @@
         border-radius: 14px;
         box-shadow:
           0 30px 60px -20px rgb(0 0 0 / 0.5),
-          0 0 0 1px rgb(255 255 255 / 0.06);
+          0 0 0 1px rgb(255 255 255 / 0.1),
+          0 0 0 4px color-mix(in srgb, var(--bg) 55%, transparent);
         font-size: 13.5px;
         overflow: hidden;
       }
@@ -963,7 +1053,7 @@
         cursor: default;
       }
       .run:not(:disabled) {
-        animation: nudge 1.8s ease-in-out infinite;
+        animation: nudge 1.8s ease-in-out 4;
       }
       @keyframes nudge {
         50% {
@@ -974,6 +1064,23 @@
         font: inherit;
         font-weight: 500;
         color: var(--muted);
+      }
+      #skip kbd {
+        font: inherit;
+        margin-left: 6px;
+        color: var(--term-muted);
+      }
+      .controls a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 7px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 12.5px;
+        font-weight: 600;
+        text-decoration: none;
       }
       .controls {
         display: flex;
@@ -1052,12 +1159,20 @@
         }
         .seg button {
           min-height: 40px;
+          min-width: 44px;
+        }
+        .controls a {
+          min-height: 44px;
+        }
+        .code .copy {
+          min-height: 44px;
         }
         .icon-btn {
           width: 44px;
           height: 44px;
         }
-        .run kbd {
+        .run kbd,
+        #skip kbd {
           display: none;
         }
       }
@@ -1068,7 +1183,9 @@
           padding-bottom: 72px;
           gap: 48px;
         }
-        .gallery {
+        .gallery,
+        .use-grid,
+        .modes {
           grid-template-columns: 1fr;
         }
         .links {
@@ -1126,7 +1243,7 @@
                 Watch it build
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7-4.5z" fill="currentColor" /></svg>
               </button>
-              <a class="btn" href="https://github.com/habom2310/swarm-build" data-swarm-block>Get the skill</a>
+              <a class="btn" href="#use" data-swarm-block>Get the skill</a>
             </div>
             <ul class="facts" data-swarm-block>
               <li style="--c: var(--ava)">Works with any coding agent</li>
@@ -1143,13 +1260,13 @@
               <div class="bar" style="width: 62%" data-swarm-block></div>
               <div class="row">
                 <div class="tile a" data-swarm-block></div>
-                <div class="tile b" data-swarm-block><span class="tag" style="--c: var(--noor)">132 × 86</span></div>
+                <div class="tile b" data-swarm-block><span class="tag" style="--c: var(--noor)" data-size></span></div>
                 <div class="tile c" data-swarm-block></div>
               </div>
-              <div class="wide" data-swarm-block><span class="tag" style="--c: var(--kai)">480 × 72</span></div>
+              <div class="wide" data-swarm-block><span class="tag" style="--c: var(--kai)" data-size></span></div>
               <span class="cursor static" style="--c: var(--ava); left: 74%; top: 18px"><svg><use href="#arrow" /></svg><b>Ava</b></span>
               <span class="cursor static" style="--c: var(--noor); left: 64%; top: 196px"><svg><use href="#arrow" /></svg><b>Noor</b></span>
-              <span class="cursor static" style="--c: var(--kai); right: 14px; bottom: 34px"><svg><use href="#arrow" /></svg><b>Kai</b></span>
+              <span class="cursor static" style="--c: var(--kai); right: 64px; bottom: 34px"><svg><use href="#arrow" /></svg><b>Kai</b></span>
             </div>
           </div>
         </header>
@@ -1166,29 +1283,29 @@
             <figure class="item" style="--c: var(--ava)">
               <article class="card show" data-swarm-block>
                 <div>
-                  <h3 data-swarm-block>Blocks built this run</h3>
-                  <p class="sub">Demo page, all agents</p>
+                  <h3 data-swarm-block>Blocks on this page</h3>
+                  <p class="sub" data-swarm-block>Counted live, all six agents</p>
                 </div>
-                <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
-                  <span class="big" data-swarm-block>128</span>
-                  <span class="delta" data-swarm-block>+24 vs last run</span>
+                <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap" data-swarm-block>
+                  <span class="big" id="stat-count">0</span>
+                  <span class="delta" id="stat-note">Not built yet</span>
                 </div>
                 <div class="minis" data-swarm-block>
-                  <span><b>6</b>agents</span><span><b>9.4s</b>to build</span><span><b>0</b>layout shifts</span>
+                  <span><b>6</b>agents</span><span><b id="stat-typed">0</b>typed in</span><span><b>0</b>layout shifts</span>
                 </div>
                 <svg class="spark" viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true" data-swarm-block>
                   <path d="M0 60 L30 52 L60 56 L90 40 L120 44 L150 30 L180 34 L210 20 L240 24 L270 10 L300 14 L300 70 L0 70Z" fill="color-mix(in srgb, #2563eb 12%, transparent)" />
                   <path d="M0 60 L30 52 L60 56 L90 40 L120 44 L150 30 L180 34 L210 20 L240 24 L270 10 L300 14" fill="none" stroke="#2563eb" stroke-width="2.5" />
                 </svg>
               </article>
-              <figcaption>Stat card</figcaption>
+              <figcaption data-swarm-block>Stat card</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--kai)">
               <article class="card show" data-swarm-block>
                 <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap">
                   <h3 data-swarm-block>Blocks per agent</h3>
-                  <div class="legend"><span><i></i>Boxes</span><span><i class="light"></i>Typed</span></div>
+                  <div class="legend" data-swarm-block><span><i></i>Boxes</span><span><i class="light"></i>Typed</span></div>
                 </div>
                 <svg class="chart" viewBox="0 0 420 200" role="img" aria-label="Bar chart: boxes and typed blocks drawn by each of the six agents" data-swarm-block>
                   <g stroke="#ecebe5"><path d="M0 30H420M0 90H420M0 150H420" /></g>
@@ -1205,7 +1322,7 @@
                   </g>
                 </svg>
               </article>
-              <figcaption>Chart</figcaption>
+              <figcaption data-swarm-block>Chart</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--noor)">
@@ -1214,7 +1331,7 @@
                 <table data-swarm-block>
                   <thead><tr><th>Page</th><th>Blocks</th><th>Status</th></tr></thead>
                   <tbody>
-                    <tr><td><code>index.html</code></td><td>43</td><td><span class="pill ok">Built</span></td></tr>
+                    <tr><td><code>index.html</code></td><td id="table-count">0</td><td><span class="pill ok">Built</span></td></tr>
                     <tr><td><code>pricing.html</code></td><td>27</td><td><span class="pill ok">Built</span></td></tr>
                     <tr><td><code>docs/start.md</code></td><td>18</td><td><span class="pill wait">Building</span></td></tr>
                     <tr><td><code>blog/post.html</code></td><td>35</td><td><span class="pill wait">Queued</span></td></tr>
@@ -1222,7 +1339,7 @@
                   </tbody>
                 </table>
               </article>
-              <figcaption>Table</figcaption>
+              <figcaption data-swarm-block>Table</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--theo)">
@@ -1237,7 +1354,7 @@
                 </ul>
                 <a class="btn" href="https://github.com/habom2310/swarm-build" data-swarm-block>View on GitHub</a>
               </article>
-              <figcaption>Plan card</figcaption>
+              <figcaption data-swarm-block>Plan card</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--mia)">
@@ -1248,21 +1365,21 @@
                   <span><b>Theo</b>Cursor #4, swarm member</span>
                 </div>
               </article>
-              <figcaption>Testimonial</figcaption>
+              <figcaption data-swarm-block>Testimonial</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--ravi)">
               <article class="card show" data-swarm-block>
                 <h3 data-swarm-block>Configure a build</h3>
-                <form id="config" data-swarm-block>
-                  <label>Blocks selector<input type="text" value="[data-swarm-block]" readonly aria-describedby="selector-note" /></label>
-                  <p id="selector-note" class="sub">This page marks its blocks with that attribute.</p>
-                  <label class="switch-row"><input type="checkbox" role="switch" id="opt-type" checked />Type plain-text blocks</label>
-                  <label class="switch-row"><input type="checkbox" role="switch" id="opt-tour" />Auto-scroll with the swarm</label>
-                  <button class="btn primary" type="submit">Start the swarm</button>
+                <form id="config">
+                  <label data-swarm-block>Blocks selector<input type="text" value="[data-swarm-block]" readonly aria-describedby="selector-note" /></label>
+                  <p id="selector-note" class="sub" data-swarm-block>Fixed for this demo: it is the attribute this page marks its blocks with.</p>
+                  <label class="switch-row" data-swarm-block><input type="checkbox" role="switch" id="opt-type" checked />Type plain-text blocks</label>
+                  <label class="switch-row" data-swarm-block><input type="checkbox" role="switch" id="opt-tour" />Auto-scroll with the swarm</label>
+                  <button class="btn primary" type="submit" data-swarm-block>Start the swarm</button>
                 </form>
               </article>
-              <figcaption>Form</figcaption>
+              <figcaption data-swarm-block>Form</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--mia)">
@@ -1274,7 +1391,7 @@
                   <div class="shot s3" data-swarm-block><span>Pricing</span></div>
                 </div>
               </article>
-              <figcaption>Media grid</figcaption>
+              <figcaption data-swarm-block>Media grid</figcaption>
             </figure>
 
             <figure class="item" style="--c: var(--theo)">
@@ -1288,9 +1405,50 @@
                   <li style="--c: var(--mia)"><i></i>Mia swept in the gallery<time>3.3s</time></li>
                 </ol>
               </article>
-              <figcaption>Activity feed</figcaption>
+              <figcaption data-swarm-block>Activity feed</figcaption>
             </figure>
           </div>
+        </div>
+      </section>
+
+      <section class="use" id="use" aria-labelledby="use-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="use-title" data-swarm-block>Add it to your site.</h2>
+            <p data-swarm-block>A skill is a set of instructions your coding agent reads before it works. Install this one, then ask for it in plain words.</p>
+          </div>
+          <div class="use-grid">
+            <div>
+              <h3 data-swarm-block>Ask your agent</h3>
+              <p data-swarm-block>Install the skill once. For Claude Code:</p>
+              <div class="code mono" data-swarm-block>
+                <pre><code>git clone https://github.com/habom2310/swarm-build
+cp -r swarm-build/skills/swarm-build ~/.claude/skills/</code></pre>
+                <button class="copy" type="button">Copy</button>
+              </div>
+              <p data-swarm-block>Then ask, in any project:</p>
+              <div class="code mono prose" data-swarm-block>
+                <pre><code id="use-prompt"></code></pre>
+                <button class="copy" type="button">Copy</button>
+              </div>
+            </div>
+            <div>
+              <h3 data-swarm-block>Or wire it yourself</h3>
+              <p data-swarm-block>Copy the three files in src/, mark your blocks, and call it once the page has loaded. No dependencies, no build step.</p>
+              <div class="code mono" data-swarm-block>
+                <pre><code>&lt;h1 data-swarm-block&gt;Hello&lt;/h1&gt;
+&lt;script type="module"&gt;
+  import { swarmBuildPage } from "./swarm-build.js";
+  swarmBuildPage();
+&lt;/script&gt;</code></pre>
+                <button class="copy" type="button">Copy</button>
+              </div>
+            </div>
+          </div>
+          <ul class="modes">
+            <li data-swarm-block><b>Page mode</b> rebuilds the live elements of a page, block by block, like this one.</li>
+            <li data-swarm-block><b>Image mode</b> builds a screenshot region by region, for a hero or product shot.</li>
+          </ul>
         </div>
       </section>
     </main>
@@ -1327,8 +1485,9 @@
           </div>
           <span class="grow"></span>
           <button id="tour" aria-pressed="false">Auto-scroll</button>
-          <button id="skip">Finish</button>
+          <button id="skip" aria-keyshortcuts="Escape">Finish<kbd aria-hidden="true">Esc</kbd></button>
           <button id="again" hidden>Replay</button>
+          <a id="get" href="#use" hidden>Add it to your site</a>
         </div>
       </div>
     </aside>
@@ -1345,6 +1504,11 @@
       let swarm;
       let speed = 1;
       let touring = 0;
+      let skipped = false;
+      const finish = () => {
+        skipped = true;
+        swarm?.finish();
+      };
       let state = "intro"; // intro, ready, planning, built
 
       const escapeHtml = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
@@ -1352,6 +1516,33 @@
 
       // Keep the footer clear of the dock, whatever its size.
       new ResizeObserver(() => document.documentElement.style.setProperty("--dock-h", `${dock.offsetHeight}px`)).observe(dock);
+
+      // The hero's size tags show the real size of their boxes.
+      const sizeTags = () =>
+        document.querySelectorAll("[data-size]").forEach((tag) => (tag.textContent = `${tag.parentElement.offsetWidth} × ${tag.parentElement.offsetHeight}`));
+      sizeTags();
+      new ResizeObserver(sizeTags).observe(document.querySelector(".mock"));
+
+      // The stat card and table report on this page, so their numbers are counted, not made up.
+      const built = blocks().filter((b) => b.checkVisibility?.() !== false);
+      const typedCount = built.filter((b) => [...b.childNodes].every((n) => n.nodeType === Node.TEXT_NODE) && b.textContent.trim() && b.textContent.length <= 240).length;
+      $("stat-count").textContent = $("table-count").textContent = built.length;
+      $("stat-typed").textContent = typedCount;
+      $("use-prompt").textContent = PROMPT;
+
+      document.querySelectorAll(".code .copy").forEach((button) =>
+        button.addEventListener("click", async () => {
+          const text = button.previousElementSibling.textContent;
+          try {
+            await navigator.clipboard.writeText(text);
+            button.textContent = "Copied";
+          } catch {
+            getSelection().selectAllChildren(button.previousElementSibling);
+            button.textContent = "Press Ctrl+C";
+          }
+          setTimeout(() => (button.textContent = "Copy"), 1800);
+        }),
+      );
 
       function step(n) {
         $("steps").querySelectorAll("li").forEach((s) => {
@@ -1418,7 +1609,7 @@
         await sleep(400);
         log("Read <em>skills/swarm-build/SKILL.md</em>", "ok");
         await sleep(450);
-        log(`Marked ${blocks().length} blocks with <em>data-swarm-block</em>: nav, hero, and 8 gallery cards`, "ok");
+        log(`Marked ${built.length} blocks with <em>data-swarm-block</em>: nav, hero, 8 gallery cards and the install steps`, "ok");
         await sleep(600);
         log("Added <em>swarmBuildPage()</em> on load", "ok");
         await sleep(400);
@@ -1434,15 +1625,17 @@
           log("Reduced motion is on, so the swarm stays still and the page stays as it is. Turn it off in your system settings to watch the build.", "note");
           return;
         }
-        window.scrollTo({ top: 0, behavior: "instant" });
         log("Swarm started.");
         status("Building. Scroll down: the swarm follows you.");
         $("controls").hidden = false;
-        $("again").hidden = true;
-        $("skip").hidden = false;
-        $("tour").hidden = false;
+        $("again").hidden = $("get").hidden = true;
+        $("skip").hidden = $("tour").hidden = false;
         dock.classList.add("compact");
         document.body.classList.add("building");
+        // The button that started it is about to be hidden, so focus moves to Finish.
+        (dock.classList.contains("min") ? $("min") : $("skip")).focus({ preventScroll: true });
+        const began = performance.now();
+        skipped = false;
         const current = (swarm = lib.swarmBuildPage("[data-swarm-block]", {
           speed,
           typeSpeed: $("opt-type").checked ? 1 : 100,
@@ -1452,18 +1645,22 @@
           if (swarm !== current) return;
           stopTour();
           document.body.classList.remove("building");
-          log("Page built.", "ok");
-          status("Page built. Replay it, or get the skill on GitHub.", true);
-          $("again").hidden = false;
-          $("skip").hidden = true;
-          $("tour").hidden = true;
+          const seconds = ((performance.now() - began) / 1000).toFixed(1);
+          $("stat-note").textContent = skipped ? `Finished early at ${seconds}s` : `Built in ${seconds}s at ${speed}×`;
+          log(skipped ? `Finished early at ${seconds}s.` : `Page built in ${seconds}s.`, "ok");
+          status("Page built. Replay it, or add it to your site.", true);
+          const hadFocus = dock.contains(document.activeElement) || document.activeElement === document.body;
+          $("again").hidden = $("get").hidden = false;
+          $("skip").hidden = $("tour").hidden = true;
+          if (hadFocus) (dock.classList.contains("min") ? $("min") : $("again")).focus({ preventScroll: true });
         });
       }
 
       // Auto-scroll at a pace the swarm can follow.
       function tour() {
-        if (touring) return stopTour();
+        if (touring) return stopTour(true);
         $("tour").setAttribute("aria-pressed", "true");
+        $("opt-tour").checked = true;
         let last = performance.now();
         const stepTour = (now) => {
           window.scrollBy({ top: ((now - last) / 1000) * 70 * speed, behavior: "instant" });
@@ -1473,8 +1670,10 @@
         };
         touring = requestAnimationFrame(stepTour);
       }
-      function stopTour() {
+      /** A visitor's stop (wheel, touch, the button) also turns the form's switch off. */
+      function stopTour(byVisitor = false) {
         cancelAnimationFrame(touring);
+        if (touring && byVisitor) $("opt-tour").checked = false;
         touring = 0;
         $("tour").setAttribute("aria-pressed", "false");
       }
@@ -1496,8 +1695,9 @@
         start();
       });
       $("min").addEventListener("click", () => minimize(!dock.classList.contains("min")));
-      // Enter runs the prompt, but not while a link or another control has focus.
+      // Enter runs the prompt, but not while a link or another control has focus. Esc finishes a build.
       document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && document.body.classList.contains("building")) return finish();
         const focus = document.activeElement;
         if (e.key === "Enter" && state === "ready" && (focus === document.body || focus === $("run"))) {
           e.preventDefault();
@@ -1512,10 +1712,15 @@
         }),
       );
       $("tour").addEventListener("click", tour);
-      $("skip").addEventListener("click", () => swarm?.finish());
+      $("opt-tour").addEventListener("change", () => {
+        if (document.body.classList.contains("building") && $("opt-tour").checked !== Boolean(touring)) tour();
+      });
+      $("skip").addEventListener("click", finish);
       $("again").addEventListener("click", build);
-      addEventListener("wheel", stopTour, { passive: true });
-      addEventListener("touchstart", stopTour, { passive: true });
+      // Scrolling by hand stops the tour; taps on its own controls toggle it instead.
+      const handScroll = (e) => e.target.closest?.("#dock, .switch-row") || stopTour(true);
+      addEventListener("wheel", handScroll, { passive: true });
+      addEventListener("touchstart", handScroll, { passive: true });
       intro();
     </script>
   </body>

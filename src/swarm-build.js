@@ -82,16 +82,17 @@ function typeable(node) {
 /** Each block's own clip-path, kept while any swarm holds it, so overlapping swarms restore it once. */
 const owned = new WeakMap();
 function hold(node) {
-  const entry = owned.get(node) ?? { clip: node.style.clipPath, count: 0 };
+  const entry = owned.get(node) ?? { clip: node.style.clipPath, inert: node.inert, count: 0 };
   entry.count++;
   owned.set(node, entry);
-  return entry.clip;
+  return entry;
 }
 function release(node) {
   const entry = owned.get(node);
   if (!entry || --entry.count > 0) return;
   owned.delete(node);
   node.style.clipPath = entry.clip;
+  node.inert = entry.inert;
 }
 
 const stopped = { finished: Promise.resolve(), finish() {}, destroy() {}, setSpeed() {} };
@@ -210,7 +211,7 @@ function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, opti
     const start = offstage();
     // Place it offstage now, so it never flashes at the top-left before the first frame.
     node.style.transform = `translate3d(${start.x}px, ${start.y}px, 0)`;
-    return { agent, node, offstage, from: start, to: start, p: 1, ease: easeInOut, scale: 1 };
+    return { agent, node, label, flip: false, offstage, from: start, to: start, p: 1, ease: easeInOut, scale: 1 };
   });
 
   const boxes = new Set();
@@ -220,7 +221,15 @@ function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, opti
       const a = resolve(c.from);
       const b = resolve(c.to);
       const t = c.ease(c.p);
-      c.node.style.transform = `translate3d(${lerp(a.x, b.x, t)}px, ${lerp(a.y, b.y, t)}px, 0) scale(${c.scale})`;
+      const x = lerp(a.x, b.x, t);
+      c.node.style.transform = `translate3d(${x}px, ${lerp(a.y, b.y, t)}px, 0) scale(${c.scale})`;
+      // Near the right edge the name tag sits left of the arrow, so it is never cut off.
+      c.labelWidth ||= c.label.offsetWidth;
+      const flip = x > innerWidth - c.labelWidth - 24;
+      if (flip !== c.flip) {
+        c.flip = flip;
+        c.label.style.transform = flip ? "translateX(calc(-100% - 16px))" : "";
+      }
     }
     for (const b of boxes) {
       const r = b.task.rect();
@@ -257,6 +266,8 @@ function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, opti
           borderRadius: task.radius ?? "0",
           background: "rgb(128 128 128 / 0.10)",
           boxSizing: "border-box",
+          // Hidden until its cursor arrives, so it never shows at the stage's corner.
+          visibility: "hidden",
         },
         stage,
       ),
@@ -284,6 +295,8 @@ function runSwarm(tasks, { prepare, observe, settleAll, onFrame = () => {}, opti
     await move(c, { task, fx: 0, fy: 0 }, 0.7);
     c.scale = 0.85;
     boxes.add(box);
+    render();
+    box.node.style.visibility = "";
     const { width, height } = task.size();
     if (task.rect().bottom > innerHeight - 24) Object.assign(badge.style, { top: "auto", bottom: "4px" });
     const area = Math.min(1, (task.rect().width * task.rect().height) / (innerWidth * innerHeight));
@@ -578,6 +591,8 @@ export function swarmBuildPage(blocks = "[data-swarm-block]", options = {}) {
     task.radius = getComputedStyle(node).borderRadius;
     task.text = typeable(node);
     task.reveal = async (tween) => {
+      // Focusable again as soon as it starts to show, unless another swarm still hides it.
+      if (owned.get(node)?.count <= 1) node.inert = task.inert;
       if (!task.text) {
         await tween(0.45, (t) => (node.style.clipPath = sweep(easeOut(t))));
         node.style.clipPath = task.clip;
@@ -607,8 +622,10 @@ export function swarmBuildPage(blocks = "[data-swarm-block]", options = {}) {
 
   const prepare = () => {
     tasks.forEach((t) => {
-      t.clip = hold(t.node);
+      ({ clip: t.clip, inert: t.inert } = hold(t.node));
       t.node.style.clipPath = HIDDEN;
+      // Hidden blocks are out of the tab order and the accessibility tree.
+      t.node.inert = true;
     });
     unpend();
     return () =>
